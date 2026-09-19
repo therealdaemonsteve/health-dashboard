@@ -1,0 +1,39 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+.venv/
+*.pyc
+
+# AWS deployment secrets
+aws-deploy/.deploy-config
+
+# iOS
+HealthDashboard/build/
+HealthDashboard/.testflight.env
+HealthDashboard/HealthDashboard.xcodeproj/xcuserdata/
+HealthDashboard/HealthDashboard.xcodeproj/project.xcworkspace/xcuserdata/
+
+# Personal health data (generate your own with build_unified_data.py)
+bloodwork_data.json
+events.json
+nutrition.json
+coaching.json
+lifting.json
+phases.json
+bluecrest_blood_tests.json
+manual_blood_tests.json
+mymedichecks_blood_tests.json
+eventsdl.json
+events\ copy.json
+data/
+
+# Generated
+dashboard.html
+
+# Backups
+backups/
+
+# Claude local settings
+.claude/
