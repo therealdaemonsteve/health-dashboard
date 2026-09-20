@@ -28,6 +28,8 @@ echo "This will DELETE all AWS resources for this dashboard:"
 echo "  Bucket: $BUCKET_NAME"
 echo "  Distribution: $DIST_ID"
 echo "  CF Function: $CF_FUNC_NAME"
+[ -n "${MCP_FUNC_NAME:-}" ] && echo "  MCP Lambda: $MCP_FUNC_NAME"
+[ -n "${LAMBDA_FUNC_NAME:-}" ] && echo "  Proxy Lambda: $LAMBDA_FUNC_NAME"
 echo ""
 read -p "Are you sure? (yes/no): " CONFIRM
 if [ "$CONFIRM" != "yes" ]; then
@@ -35,7 +37,21 @@ if [ "$CONFIRM" != "yes" ]; then
   exit 0
 fi
 
-# ── 0. Delete Lambda proxy resources ─────────
+# ── 0a. Delete MCP Lambda resources ──────────
+if [ -n "${MCP_FUNC_NAME:-}" ]; then
+  echo "→ Deleting MCP Lambda Function URL"
+  aws lambda delete-function-url-config \
+    --function-name "$MCP_FUNC_NAME" \
+    --region "$REGION" 2>/dev/null || true
+
+  echo "→ Deleting MCP Lambda function: $MCP_FUNC_NAME"
+  aws lambda delete-function \
+    --function-name "$MCP_FUNC_NAME" \
+    --region "$REGION" 2>/dev/null || true
+  echo "  ✓ MCP Lambda function deleted"
+fi
+
+# ── 0b. Delete Lambda proxy resources ────────
 if [ -n "${LAMBDA_FUNC_NAME:-}" ]; then
   echo "→ Deleting Lambda Function URL"
   aws lambda delete-function-url-config \
@@ -49,9 +65,16 @@ if [ -n "${LAMBDA_FUNC_NAME:-}" ]; then
   echo "  ✓ Lambda function deleted"
 fi
 
+# ── 0c. Delete IAM role and policies ─────────
 if [ -n "${LAMBDA_ROLE_ARN:-}" ]; then
   LAMBDA_ROLE_NAME="bloodwork-lambda-role"
-  echo "→ Detaching policy from IAM role: $LAMBDA_ROLE_NAME"
+
+  echo "→ Deleting inline policies from IAM role: $LAMBDA_ROLE_NAME"
+  aws iam delete-role-policy \
+    --role-name "$LAMBDA_ROLE_NAME" \
+    --policy-name "bloodwork-mcp-s3-access" 2>/dev/null || true
+
+  echo "→ Detaching managed policies from IAM role: $LAMBDA_ROLE_NAME"
   aws iam detach-role-policy \
     --role-name "$LAMBDA_ROLE_NAME" \
     --policy-arn "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole" 2>/dev/null || true
