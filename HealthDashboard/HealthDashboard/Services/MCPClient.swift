@@ -5,7 +5,7 @@ import CryptoKit
 actor MCPClient {
     static let shared = MCPClient()
 
-    private let baseURL = AppConstants.apiBaseURL
+    private var baseURL: String { AppConstants.apiBaseURL }
     private let redirectURI = "healthdashboard://oauth/callback"
     private let keychainTokenKey = "oauth_access_token"
     private let keychainRefreshTokenKey = "oauth_refresh_token"

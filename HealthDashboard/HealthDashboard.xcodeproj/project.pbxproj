@@ -39,6 +39,7 @@
 		AA000032 /* CorrelationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000032 /* CorrelationView.swift */; };
 		AA000033 /* EventImpactView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000033 /* EventImpactView.swift */; };
 		AA000030 /* HealthKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AB000030 /* HealthKit.framework */; };
+		AA000034 /* ServerSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000034 /* ServerSetupView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -74,6 +75,7 @@
 		AB000031 /* AnalyticsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsTab.swift; sourceTree = "<group>"; };
 		AB000032 /* CorrelationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CorrelationView.swift; sourceTree = "<group>"; };
 		AB000033 /* EventImpactView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventImpactView.swift; sourceTree = "<group>"; };
+		AB000034 /* ServerSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerSetupView.swift; sourceTree = "<group>"; };
 		AB000028 /* HealthDashboard.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = HealthDashboard.entitlements; sourceTree = "<group>"; };
 		AB000030 /* HealthKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = HealthKit.framework; path = System/Library/Frameworks/HealthKit.framework; sourceTree = SDKROOT; };
 		AC000001 /* SBHealthDashboard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SBHealthDashboard.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -161,6 +163,7 @@
 				AB000031 /* AnalyticsTab.swift */,
 				AB000032 /* CorrelationView.swift */,
 				AB000033 /* EventImpactView.swift */,
+				AB000034 /* ServerSetupView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -297,6 +300,7 @@
 				AA000031 /* AnalyticsTab.swift in Sources */,
 				AA000032 /* CorrelationView.swift in Sources */,
 				AA000033 /* EventImpactView.swift in Sources */,
+				AA000034 /* ServerSetupView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -47,6 +47,22 @@ struct MoreTab: View {
                     }
                 }
 
+                Section("Server") {
+                    LabeledContent("URL") {
+                        Text(AppConstants.apiBaseURL)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    }
+                    if !AppConstants.userId.isEmpty {
+                        LabeledContent("User ID") {
+                            Text(AppConstants.userId)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+
                 Section {
                     Button(role: .destructive) {
                         Task {

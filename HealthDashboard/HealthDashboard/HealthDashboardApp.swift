@@ -2,6 +2,7 @@ import SwiftUI
 
 @main
 struct HealthDashboardApp: App {
+    @State private var isConfigured = AppConstants.isConfigured
     @State private var isAuthenticated = false
 
     init() {
@@ -11,21 +12,31 @@ struct HealthDashboardApp: App {
     var body: some Scene {
         WindowGroup {
             Group {
-                if isAuthenticated {
+                if !isConfigured {
+                    ServerSetupView(isConfigured: $isConfigured)
+                } else if isAuthenticated {
                     DashboardView(isAuthenticated: $isAuthenticated)
                 } else {
                     LoginView(isAuthenticated: $isAuthenticated)
                 }
             }
             .task {
+                guard isConfigured else { return }
                 isAuthenticated = await MCPClient.shared.isAuthenticated
                 if isAuthenticated {
                     await setupHealthSync()
                 }
             }
+            .onChange(of: isConfigured) { _, newValue in
+                if newValue {
+                    // Just configured — check auth
+                    Task {
+                        isAuthenticated = await MCPClient.shared.isAuthenticated
+                    }
+                }
+            }
             .onChange(of: isAuthenticated) { oldValue, newValue in
                 if !oldValue && newValue {
-                    // Just logged in — start health sync
                     Task { await setupHealthSync() }
                 }
             }

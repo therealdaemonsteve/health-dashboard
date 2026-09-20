@@ -1,8 +1,39 @@
 import Foundation
 
 enum AppConstants {
-    static let userId: String = Bundle.main.infoDictionary?["HDUserId"] as? String ?? ""
-    static let apiBaseURL: String = Bundle.main.infoDictionary?["HDApiBaseURL"] as? String ?? ""
+    // UserDefaults keys for runtime-configurable values
+    private static let apiBaseURLKey = "HD_ApiBaseURL"
+    private static let userIdKey = "HD_UserId"
+
+    // Reads from UserDefaults first (set in-app), falls back to Info.plist (set at build time)
+    static var apiBaseURL: String {
+        if let stored = UserDefaults.standard.string(forKey: apiBaseURLKey), !stored.isEmpty {
+            return stored
+        }
+        return Bundle.main.infoDictionary?["HDApiBaseURL"] as? String ?? ""
+    }
+
+    static var userId: String {
+        if let stored = UserDefaults.standard.string(forKey: userIdKey), !stored.isEmpty {
+            return stored
+        }
+        return Bundle.main.infoDictionary?["HDUserId"] as? String ?? ""
+    }
+
+    static var isConfigured: Bool {
+        !apiBaseURL.isEmpty
+    }
+
+    static func configure(apiBaseURL: String, userId: String) {
+        UserDefaults.standard.set(apiBaseURL, forKey: apiBaseURLKey)
+        UserDefaults.standard.set(userId, forKey: userIdKey)
+    }
+
+    static func clearConfiguration() {
+        UserDefaults.standard.removeObject(forKey: apiBaseURLKey)
+        UserDefaults.standard.removeObject(forKey: userIdKey)
+    }
+
     static let backgroundTaskIdentifier: String = Bundle.main.infoDictionary?["HDBgTaskId"] as? String ?? ""
     static let bundleIdentifier: String = Bundle.main.bundleIdentifier ?? "com.example.healthdashboard"
 
