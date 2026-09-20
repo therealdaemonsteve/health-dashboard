@@ -3,7 +3,6 @@ import SwiftUI
 struct ServerSetupView: View {
     @Binding var isConfigured: Bool
     @State private var serverURL = ""
-    @State private var userId = ""
     @State private var errorMessage: String?
     @State private var isTesting = false
 
@@ -20,38 +19,24 @@ struct ServerSetupView: View {
                     .font(.largeTitle)
                     .fontWeight(.bold)
 
-                Text("Enter the URL of your Health Dashboard server. You'll find this after running the deploy scripts.")
+                Text("Enter the URL of your Health Dashboard server. You'll find this in your deploy output after running deploy-mcp.sh.")
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
             }
 
-            VStack(spacing: 16) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Server URL")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                    TextField("https://your-lambda-url.on.aws", text: $serverURL)
-                        .textContentType(.URL)
-                        .keyboardType(.URL)
-                        .autocapitalization(.none)
-                        .autocorrectionDisabled()
-                        .padding()
-                        .background(.quaternary)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                }
-
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("User ID")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                    TextField("your_name", text: $userId)
-                        .autocapitalization(.none)
-                        .autocorrectionDisabled()
-                        .padding()
-                        .background(.quaternary)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                }
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Server URL")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                TextField("https://your-lambda-url.on.aws", text: $serverURL)
+                    .textContentType(.URL)
+                    .keyboardType(.URL)
+                    .autocapitalization(.none)
+                    .autocorrectionDisabled()
+                    .padding()
+                    .background(.quaternary)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
             }
             .padding(.horizontal, 32)
 
@@ -89,11 +74,8 @@ struct ServerSetupView: View {
             .padding(.bottom, 48)
         }
         .onAppear {
-            // Pre-fill with any existing values
             let existing = AppConstants.apiBaseURL
             if !existing.isEmpty { serverURL = existing }
-            let existingId = AppConstants.userId
-            if !existingId.isEmpty { userId = existingId }
         }
     }
 
@@ -129,7 +111,7 @@ struct ServerSetupView: View {
         }
 
         // Save configuration
-        AppConstants.configure(apiBaseURL: url, userId: userId)
+        AppConstants.configure(apiBaseURL: url)
         await MainActor.run {
             isConfigured = true
         }

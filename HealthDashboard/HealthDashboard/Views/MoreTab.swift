@@ -55,12 +55,6 @@ struct MoreTab: View {
                             .lineLimit(1)
                             .truncationMode(.middle)
                     }
-                    if !AppConstants.userId.isEmpty {
-                        LabeledContent("User ID") {
-                            Text(AppConstants.userId)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
                 }
 
                 Section {
