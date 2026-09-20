@@ -3,8 +3,9 @@ set -euo pipefail
 
 # ─────────────────────────────────────────────
 #  Health Dashboard — MCP Server Lambda Setup
-#  Creates: S3 policy, Lambda function, Function URL
-#  Run AFTER deploy.sh + deploy-lambda.sh (needs .deploy-config)
+#  Creates: IAM role, S3 policy, Lambda function, Function URL
+#  Run AFTER deploy.sh (needs .deploy-config)
+#  Does NOT require deploy-lambda.sh or an Anthropic API key
 # ─────────────────────────────────────────────
 
 # ── Source .env if present ───────────────────
@@ -37,11 +38,51 @@ echo "  Bucket: $BUCKET_NAME"
 echo "  Region: $REGION"
 echo ""
 
-# ── 1. Generate bearer token for MCP auth ────
+# ── 1. Create or reuse IAM role ──────────────
+if [ -n "${LAMBDA_ROLE_ARN:-}" ]; then
+  echo "  ✓ Reusing existing IAM role: $LAMBDA_ROLE_ARN"
+else
+  echo "→ Creating IAM role: $LAMBDA_ROLE_NAME"
+
+  TRUST_POLICY='{
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Principal": { "Service": "lambda.amazonaws.com" },
+        "Action": "sts:AssumeRole"
+      }
+    ]
+  }'
+
+  LAMBDA_ROLE_ARN=$(aws iam create-role \
+    --role-name "$LAMBDA_ROLE_NAME" \
+    --assume-role-policy-document "$TRUST_POLICY" \
+    --query 'Role.Arn' --output text 2>/dev/null) || {
+    # Role may already exist (e.g. from a previous deploy)
+    LAMBDA_ROLE_ARN=$(aws iam get-role \
+      --role-name "$LAMBDA_ROLE_NAME" \
+      --query 'Role.Arn' --output text)
+  }
+
+  aws iam attach-role-policy \
+    --role-name "$LAMBDA_ROLE_NAME" \
+    --policy-arn "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole" 2>/dev/null || true
+
+  echo "  ✓ IAM role ready: $LAMBDA_ROLE_ARN"
+
+  # Append to config so deploy-lambda.sh and teardown.sh can find it
+  echo "LAMBDA_ROLE_ARN=$LAMBDA_ROLE_ARN" >> "$CONFIG_FILE"
+
+  echo "→ Waiting for IAM propagation..."
+  sleep 10
+fi
+
+# ── 2. Generate bearer token for MCP auth ────
 MCP_BEARER_TOKEN=$(openssl rand -hex 32)
 echo "  ✓ MCP bearer token generated"
 
-# ── 2. Add S3 read/write policy to Lambda role ──
+# ── 3. Add S3 read/write policy to Lambda role ──
 echo "→ Adding S3 access policy to $LAMBDA_ROLE_NAME"
 
 S3_POLICY=$(cat <<EOF

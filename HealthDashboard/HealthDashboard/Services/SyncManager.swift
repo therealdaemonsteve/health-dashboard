@@ -21,6 +21,29 @@ final class SyncManager {
     var recordsImportedSoFar: Int = 0
     var recordsSkippedSoFar: Int = 0
 
+    // Timing for time-remaining estimates
+    var syncStartTime: Date?
+    var uploadStartTime: Date?
+
+    var estimatedSecondsRemaining: Double? {
+        guard isSyncing else { return nil }
+
+        if syncPhase.starts(with: "Fetching"), totalTypes > 0, typesProcessed > 0,
+           let start = syncStartTime {
+            let elapsed = Date().timeIntervalSince(start)
+            let fraction = Double(typesProcessed) / Double(totalTypes)
+            return elapsed * (1.0 - fraction) / fraction
+        }
+
+        if let start = uploadStartTime, totalBatches > 0, batchesSent > 0 {
+            let elapsed = Date().timeIntervalSince(start)
+            let fraction = Double(batchesSent) / Double(totalBatches)
+            return elapsed * (1.0 - fraction) / fraction
+        }
+
+        return nil
+    }
+
     private let logger = Logger(subsystem: AppConstants.bundleIdentifier, category: "Sync")
 
     init() {
@@ -38,6 +61,8 @@ final class SyncManager {
         totalBatches = 0
         recordsImportedSoFar = 0
         recordsSkippedSoFar = 0
+        syncStartTime = nil
+        uploadStartTime = nil
     }
 
     // MARK: - Full Sync
@@ -51,6 +76,7 @@ final class SyncManager {
         isSyncing = true
         resetProgress()
         let startTime = Date()
+        syncStartTime = startTime
         var totalSent = 0
         var totalImported = 0
         var totalSkipped = 0
@@ -89,6 +115,7 @@ final class SyncManager {
             syncDetail = "\(allRecords.count) records"
             totalBatches = batches.count
             batchesSent = 0
+            uploadStartTime = Date()
 
             for (index, batch) in batches.enumerated() {
                 syncDetail = "Batch \(index + 1) of \(batches.count)"

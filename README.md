@@ -72,15 +72,18 @@ cd aws-deploy
 # 3a. S3 + CloudFront (web dashboard hosting)
 ./deploy.sh
 
-# 3b. Claude proxy Lambda (for web dashboard AI features)
-./deploy-lambda.sh
-
-# 3c. MCP server Lambda (the main API)
+# 3b. MCP server Lambda (the main API — creates IAM role + Lambda)
 ./deploy-mcp.sh
+
+# 3c. Claude proxy Lambda (OPTIONAL — needs an Anthropic API key)
+#     Only needed for the web dashboard's "Ask Claude" feature
+./deploy-lambda.sh
 
 # 3d. OAuth for Claude.ai (optional — enables claude.ai remote MCP)
 ./update-mcp-env.sh
 ```
+
+> **No Anthropic API key?** Skip step 3c. The iOS app and all MCP tools work without it. Only the web dashboard's AI chat and the `generate_insights` tool require a Claude API key.
 
 ### 4. Run post-deploy setup
 
@@ -199,8 +202,8 @@ health-dashboard/
 │
 ├── aws-deploy/
 │   ├── deploy.sh             # Step 1: S3 + CloudFront setup
-│   ├── deploy-lambda.sh      # Step 2: Claude proxy Lambda
-│   ├── deploy-mcp.sh         # Step 3: MCP server Lambda
+│   ├── deploy-mcp.sh         # Step 2: MCP server Lambda (+ IAM role)
+│   ├── deploy-lambda.sh      # Step 3: Claude proxy Lambda (optional)
 │   ├── update-mcp-env.sh     # Step 4: OAuth setup (optional)
 │   ├── update.sh             # Upload files to S3 + update Lambda code
 │   ├── teardown.sh           # Delete all AWS resources

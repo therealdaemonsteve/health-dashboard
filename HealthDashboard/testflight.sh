@@ -11,16 +11,10 @@ PROJECT="$SCRIPT_DIR/HealthDashboard.xcodeproj"
 SCHEME="HealthDashboard"
 TEAM_ID="${HD_DEVELOPMENT_TEAM:?Run setup.sh first}"
 EXPORT_OPTIONS="$SCRIPT_DIR/ExportOptions.plist"
-CONFIG_FILE="$SCRIPT_DIR/.testflight.env"
 
 ARCHIVE_DIR="/tmp/HealthDashboard_archives"
 ARCHIVE_PATH="$ARCHIVE_DIR/HealthDashboard.xcarchive"
 EXPORT_DIR="$ARCHIVE_DIR/export"
-
-# App Store Connect API key for upload
-ASC_KEY_ID="${ASC_KEY_ID:-${HD_ASC_KEY_ID:?Run setup.sh first}}"
-ASC_KEY_PATH="${ASC_KEY_PATH:-$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8}"
-ASC_ISSUER_ID="${ASC_ISSUER_ID:-}"
 
 # ── Helpers ─────────────────────────────────────────────────────────
 red()   { printf '\033[1;31m%s\033[0m\n' "$*"; }
@@ -46,11 +40,9 @@ Options:
   --dry-run     Archive only, skip upload
   -h, --help    Show this help
 
-First-time setup:
-  1. Open Xcode → Settings → Accounts → add your Apple ID
-  2. Click your team → "Manage Certificates" → ensure "Apple Distribution" exists
-     (click + to create one if missing)
-  3. That's it — signing and provisioning are automatic after that
+Requires:
+  - Xcode signed in with your Apple Developer account
+    (Xcode → Settings → Accounts → add Apple ID, ensure Distribution cert exists)
 EOF
     exit 0
 }
@@ -74,26 +66,7 @@ step "Preflight"
 [[ -f "$EXPORT_OPTIONS" ]]          || die "ExportOptions.plist not found"
 command -v xcodebuild >/dev/null    || die "xcodebuild not found"
 
-# Load saved config
-[[ -f "$CONFIG_FILE" ]] && source "$CONFIG_FILE"
-
-# Check API key for upload (only needed if not --dry-run)
-if ! $DRY_RUN; then
-    [[ -f "$ASC_KEY_PATH" ]] || die "API key not found at $ASC_KEY_PATH
-  Get one from https://appstoreconnect.apple.com/access/integrations/api"
-
-    if [[ -z "$ASC_ISSUER_ID" ]]; then
-        echo ""
-        blue "App Store Connect Issuer ID required (first-time setup)."
-        blue "Find it at: https://appstoreconnect.apple.com/access/integrations/api"
-        printf "Issuer ID: "
-        read -r ASC_ISSUER_ID
-        [[ -n "$ASC_ISSUER_ID" ]] || die "Issuer ID is required"
-        echo "ASC_ISSUER_ID=$ASC_ISSUER_ID" > "$CONFIG_FILE"
-        green "Saved to $CONFIG_FILE"
-    fi
-    green "Upload key: $ASC_KEY_ID"
-fi
+green "Team: $TEAM_ID"
 green "Checks passed"
 
 # ── Version ─────────────────────────────────────────────────────────

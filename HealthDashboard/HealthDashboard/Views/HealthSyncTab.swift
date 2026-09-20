@@ -47,8 +47,11 @@ struct HealthSyncTab: View {
                 await syncManager.performSync(trigger: .manual)
             }
             .alert("Reset Anchors?", isPresented: $showingResetAlert) {
-                Button("Reset", role: .destructive) {
+                Button("Reset & Sync", role: .destructive) {
                     resetAnchors()
+                    Task {
+                        await syncManager.performSync(trigger: .manual)
+                    }
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
@@ -63,52 +66,64 @@ struct HealthSyncTab: View {
 
     private var syncProgressSection: some View {
         Section {
-            // Phase + detail
-            HStack(spacing: 10) {
-                ProgressView()
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(syncManager.syncPhase)
-                        .fontWeight(.medium)
-                    Text(syncManager.syncDetail)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+            TimelineView(.periodic(from: .now, by: 1)) { _ in
+                // Phase + detail
+                HStack(spacing: 10) {
+                    ProgressView()
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(syncManager.syncPhase)
+                            .fontWeight(.medium)
+                        Text(syncManager.syncDetail)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
-            }
 
-            // Progress bar
-            if syncManager.syncPhase.starts(with: "Fetching") {
-                // Fetch phase: types processed / total
-                if syncManager.totalTypes > 0 {
+                // Progress bar
+                if syncManager.syncPhase.starts(with: "Fetching") {
+                    // Fetch phase: types processed / total
+                    if syncManager.totalTypes > 0 {
+                        VStack(alignment: .leading, spacing: 4) {
+                            ProgressView(
+                                value: Double(syncManager.typesProcessed),
+                                total: Double(syncManager.totalTypes)
+                            )
+                            HStack {
+                                Text("\(syncManager.typesProcessed)/\(syncManager.totalTypes) types")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                                Spacer()
+                                Text("\(syncManager.recordsCollected) records found")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                            if let remaining = syncManager.estimatedSecondsRemaining {
+                                Text(formatTimeRemaining(remaining))
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                } else if syncManager.totalBatches > 0 {
+                    // Upload phase: batches sent / total
                     VStack(alignment: .leading, spacing: 4) {
                         ProgressView(
-                            value: Double(syncManager.typesProcessed),
-                            total: Double(syncManager.totalTypes)
+                            value: Double(syncManager.batchesSent),
+                            total: Double(syncManager.totalBatches)
                         )
                         HStack {
-                            Text("\(syncManager.typesProcessed)/\(syncManager.totalTypes) types")
+                            Text("\(syncManager.batchesSent)/\(syncManager.totalBatches) batches")
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
                             Spacer()
-                            Text("\(syncManager.recordsCollected) records found")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
+                            if syncManager.recordsImportedSoFar > 0 || syncManager.recordsSkippedSoFar > 0 {
+                                Text("\(syncManager.recordsImportedSoFar) imported, \(syncManager.recordsSkippedSoFar) skipped")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
                         }
-                    }
-                }
-            } else if syncManager.totalBatches > 0 {
-                // Upload phase: batches sent / total
-                VStack(alignment: .leading, spacing: 4) {
-                    ProgressView(
-                        value: Double(syncManager.batchesSent),
-                        total: Double(syncManager.totalBatches)
-                    )
-                    HStack {
-                        Text("\(syncManager.batchesSent)/\(syncManager.totalBatches) batches")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                        Spacer()
-                        if syncManager.recordsImportedSoFar > 0 || syncManager.recordsSkippedSoFar > 0 {
-                            Text("\(syncManager.recordsImportedSoFar) imported, \(syncManager.recordsSkippedSoFar) skipped")
+                        if let remaining = syncManager.estimatedSecondsRemaining {
+                            Text(formatTimeRemaining(remaining))
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
                         }
@@ -118,6 +133,15 @@ struct HealthSyncTab: View {
         } header: {
             Text("Sync in Progress")
         }
+    }
+
+    private func formatTimeRemaining(_ seconds: Double) -> String {
+        if seconds < 5 { return "Almost done" }
+        if seconds < 60 { return "~\(Int(seconds))s remaining" }
+        let mins = Int(seconds) / 60
+        let secs = Int(seconds) % 60
+        if secs == 0 { return "~\(mins)m remaining" }
+        return "~\(mins)m \(secs)s remaining"
     }
 
     // MARK: - Idle Status (shown when not syncing)

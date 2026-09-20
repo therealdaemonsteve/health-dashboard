@@ -35,10 +35,10 @@
 		AA000025 /* SyncManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000025 /* SyncManager.swift */; };
 		AA000026 /* BackgroundTaskManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000026 /* BackgroundTaskManager.swift */; };
 		AA000027 /* HealthSyncTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000027 /* HealthSyncTab.swift */; };
+		AA000030 /* HealthKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AB000030 /* HealthKit.framework */; };
 		AA000031 /* AnalyticsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000031 /* AnalyticsTab.swift */; };
 		AA000032 /* CorrelationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000032 /* CorrelationView.swift */; };
 		AA000033 /* EventImpactView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000033 /* EventImpactView.swift */; };
-		AA000030 /* HealthKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AB000030 /* HealthKit.framework */; };
 		AA000034 /* ServerSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000034 /* ServerSetupView.swift */; };
 /* End PBXBuildFile section */
 
@@ -72,14 +72,14 @@
 		AB000025 /* SyncManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncManager.swift; sourceTree = "<group>"; };
 		AB000026 /* BackgroundTaskManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundTaskManager.swift; sourceTree = "<group>"; };
 		AB000027 /* HealthSyncTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthSyncTab.swift; sourceTree = "<group>"; };
+		AB000028 /* HealthDashboard.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = HealthDashboard.entitlements; sourceTree = "<group>"; };
+		AB000030 /* HealthKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = HealthKit.framework; path = System/Library/Frameworks/HealthKit.framework; sourceTree = SDKROOT; };
 		AB000031 /* AnalyticsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsTab.swift; sourceTree = "<group>"; };
 		AB000032 /* CorrelationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CorrelationView.swift; sourceTree = "<group>"; };
 		AB000033 /* EventImpactView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventImpactView.swift; sourceTree = "<group>"; };
 		AB000034 /* ServerSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerSetupView.swift; sourceTree = "<group>"; };
-		AB000028 /* HealthDashboard.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = HealthDashboard.entitlements; sourceTree = "<group>"; };
-		AB000030 /* HealthKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = HealthKit.framework; path = System/Library/Frameworks/HealthKit.framework; sourceTree = SDKROOT; };
-		AC000001 /* SBHealthDashboard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SBHealthDashboard.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AB000040 /* UserConfig.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = UserConfig.xcconfig; sourceTree = "<group>"; };
+		AC000001 /* SBHealthDashboard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SBHealthDashboard.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -434,7 +434,8 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = HealthDashboard/HealthDashboard.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 15;
+				CURRENT_PROJECT_VERSION = 20;
+				DEVELOPMENT_TEAM = "";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = HealthDashboard/Info.plist;
@@ -470,7 +471,8 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = HealthDashboard/HealthDashboard.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 15;
+				CURRENT_PROJECT_VERSION = 20;
+				DEVELOPMENT_TEAM = "";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = HealthDashboard/Info.plist;

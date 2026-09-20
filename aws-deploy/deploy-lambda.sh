@@ -2,9 +2,10 @@
 set -euo pipefail
 
 # ─────────────────────────────────────────────
-#  Bloodwork Dashboard — Lambda proxy setup
-#  Creates: IAM role, Lambda function, Function URL
+#  Health Dashboard — Claude Proxy Lambda Setup (OPTIONAL)
+#  Creates: Lambda function, Function URL
 #  Run AFTER deploy.sh (needs DIST_DOMAIN in .deploy-config)
+#  Requires an Anthropic API key — skip if not needed
 # ─────────────────────────────────────────────
 
 # ── Source .env if present ───────────────────
@@ -47,36 +48,44 @@ fi
 BEARER_TOKEN=$(openssl rand -hex 32)
 echo "  ✓ Bearer token generated"
 
-# ── 3. Create IAM role ──────────────────────
+# ── 3. Create or reuse IAM role ───────────────
 LAMBDA_ROLE_NAME="bloodwork-lambda-role"
 
-echo "→ Creating IAM role: $LAMBDA_ROLE_NAME"
+if [ -n "${LAMBDA_ROLE_ARN:-}" ]; then
+  echo "  ✓ Reusing existing IAM role: $LAMBDA_ROLE_ARN"
+else
+  echo "→ Creating IAM role: $LAMBDA_ROLE_NAME"
 
-TRUST_POLICY='{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Principal": { "Service": "lambda.amazonaws.com" },
-      "Action": "sts:AssumeRole"
-    }
-  ]
-}'
+  TRUST_POLICY='{
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Principal": { "Service": "lambda.amazonaws.com" },
+        "Action": "sts:AssumeRole"
+      }
+    ]
+  }'
 
-LAMBDA_ROLE_ARN=$(aws iam create-role \
-  --role-name "$LAMBDA_ROLE_NAME" \
-  --assume-role-policy-document "$TRUST_POLICY" \
-  --query 'Role.Arn' --output text)
+  LAMBDA_ROLE_ARN=$(aws iam create-role \
+    --role-name "$LAMBDA_ROLE_NAME" \
+    --assume-role-policy-document "$TRUST_POLICY" \
+    --query 'Role.Arn' --output text 2>/dev/null) || {
+    # Role may already exist (e.g. created by deploy-mcp.sh)
+    LAMBDA_ROLE_ARN=$(aws iam get-role \
+      --role-name "$LAMBDA_ROLE_NAME" \
+      --query 'Role.Arn' --output text)
+  }
 
-aws iam attach-role-policy \
-  --role-name "$LAMBDA_ROLE_NAME" \
-  --policy-arn "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+  aws iam attach-role-policy \
+    --role-name "$LAMBDA_ROLE_NAME" \
+    --policy-arn "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole" 2>/dev/null || true
 
-echo "  ✓ IAM role created: $LAMBDA_ROLE_ARN"
+  echo "  ✓ IAM role ready: $LAMBDA_ROLE_ARN"
 
-# ── 4. Wait for IAM propagation ─────────────
-echo "→ Waiting for IAM propagation..."
-sleep 10
+  echo "→ Waiting for IAM propagation..."
+  sleep 10
+fi
 
 # ── 5. Create Lambda function ───────────────
 LAMBDA_FUNC_NAME="bloodwork-claude-proxy"
@@ -134,10 +143,14 @@ aws lambda add-permission \
 echo "  ✓ Public invoke permissions added"
 
 # ── 8. Append to config ─────────────────────
+# Only write LAMBDA_ROLE_ARN if not already in config (may have been set by deploy-mcp.sh)
+if ! grep -q "^LAMBDA_ROLE_ARN=" "$CONFIG_FILE" 2>/dev/null; then
+  echo "LAMBDA_ROLE_ARN=$LAMBDA_ROLE_ARN" >> "$CONFIG_FILE"
+fi
+
 cat >> "$CONFIG_FILE" <<EOF
 LAMBDA_FUNC_NAME=$LAMBDA_FUNC_NAME
 LAMBDA_FUNC_URL=$LAMBDA_FUNC_URL
-LAMBDA_ROLE_ARN=$LAMBDA_ROLE_ARN
 ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY
 BEARER_TOKEN=$BEARER_TOKEN
 EOF
