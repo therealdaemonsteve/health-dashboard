@@ -6,11 +6,15 @@ set -euo pipefail
 #  Creates: S3 bucket, CloudFront Function (basic auth), CloudFront distribution
 # ─────────────────────────────────────────────
 
-# ── CONFIG (edit these) ──────────────────────
+# ── Source .env if present ───────────────────
+ENV_FILE="$(cd "$(dirname "$0")/.." && pwd)/.env"
+[[ -f "$ENV_FILE" ]] && { set -a; source "$ENV_FILE"; set +a; }
+
+# ── CONFIG ───────────────────────────────────
 BUCKET_NAME="bloodwork-dashboard-$(openssl rand -hex 4)"
-REGION="eu-west-2"          # London — change if you prefer
-AUTH_USER="steve"
-AUTH_PASS="CHANGE_ME"                    # ← set your password here
+REGION="${HD_AWS_REGION:-eu-west-2}"
+AUTH_USER="${HD_DASHBOARD_AUTH_USER:?Run setup.sh first}"
+AUTH_PASS="${HD_DASHBOARD_AUTH_PASS:?Run setup.sh first}"
 CF_COMMENT="Bloodwork Dashboard"
 # ─────────────────────────────────────────────
 
@@ -24,7 +28,7 @@ echo ""
 
 # Validate password was changed
 if [ "$AUTH_PASS" = "CHANGE_ME" ]; then
-  echo "ERROR: Edit deploy.sh and set AUTH_PASS before running."
+  echo "ERROR: Set HD_DASHBOARD_AUTH_PASS in .env (run setup.sh)."
   exit 1
 fi
 

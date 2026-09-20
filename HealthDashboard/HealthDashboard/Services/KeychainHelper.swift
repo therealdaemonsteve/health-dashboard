@@ -2,7 +2,7 @@ import Foundation
 import Security
 
 enum KeychainHelper {
-    private static let service = "com.stevenbennett.healthdashboard"
+    private static let service = AppConstants.bundleIdentifier
 
     static func save(key: String, data: Data) throws {
         let query: [String: Any] = [

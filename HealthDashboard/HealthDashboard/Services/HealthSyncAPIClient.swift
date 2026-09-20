@@ -4,7 +4,7 @@ import os
 actor HealthSyncAPIClient {
     static let shared = HealthSyncAPIClient()
 
-    private let logger = Logger(subsystem: "com.stevenbennett.healthdashboard", category: "SyncAPI")
+    private let logger = Logger(subsystem: AppConstants.bundleIdentifier, category: "SyncAPI")
 
     private let session: URLSession = {
         let config = URLSessionConfiguration.default

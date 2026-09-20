@@ -4,7 +4,7 @@ import os
 enum BackgroundTaskManager {
 
     private static let logger = Logger(
-        subsystem: "com.stevenbennett.healthdashboard",
+        subsystem: AppConstants.bundleIdentifier,
         category: "BackgroundTask"
     )
 

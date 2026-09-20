@@ -6,6 +6,10 @@ set -euo pipefail
 #  Run this after rebuilding dashboard.html or bloodwork_data.json
 # ─────────────────────────────────────────────
 
+# ── Source .env if present ───────────────────
+ENV_FILE="$(cd "$(dirname "$0")/.." && pwd)/.env"
+[[ -f "$ENV_FILE" ]] && { set -a; source "$ENV_FILE"; set +a; }
+
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 CONFIG_FILE="$SCRIPT_DIR/.deploy-config"
 DASHBOARD_DIR="$SCRIPT_DIR/.."  # assumes aws-deploy/ is inside outputs/

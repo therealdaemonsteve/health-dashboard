@@ -5,7 +5,7 @@ import CryptoKit
 actor MCPClient {
     static let shared = MCPClient()
 
-    private let baseURL = "https://nwoyzbofonszvggd5wo2pqvida0fvcqq.lambda-url.eu-west-2.on.aws"
+    private let baseURL = AppConstants.apiBaseURL
     private let redirectURI = "healthdashboard://oauth/callback"
     private let keychainTokenKey = "oauth_access_token"
     private let keychainRefreshTokenKey = "oauth_refresh_token"

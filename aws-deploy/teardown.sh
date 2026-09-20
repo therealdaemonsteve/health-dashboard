@@ -6,6 +6,10 @@ set -euo pipefail
 #  Removes: CloudFront distribution, function, OAC, S3 bucket
 # ─────────────────────────────────────────────
 
+# ── Source .env if present ───────────────────
+ENV_FILE="$(cd "$(dirname "$0")/.." && pwd)/.env"
+[[ -f "$ENV_FILE" ]] && { set -a; source "$ENV_FILE"; set +a; }
+
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 CONFIG_FILE="$SCRIPT_DIR/.deploy-config"
 

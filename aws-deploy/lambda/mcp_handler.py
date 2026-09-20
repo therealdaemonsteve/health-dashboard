@@ -149,28 +149,28 @@ APPLE_HEALTH_MAP = {
     "appleSleepingWristTemperature": "Sleeping Wrist Temperature",
     "bloodGlucose": "Blood Glucose",
     "peripheralPerfusionIndex": "Perfusion Index",
-    # Nutrition
-    "dietaryEnergyConsumed": "Calories In",
-    "dietaryProtein": "Protein",
-    "dietaryCarbohydrates": "Carbs",
-    "dietaryFatTotal": "Fat",
-    "dietaryFiber": "Fibre",
-    "dietarySugar": "Sugar",
-    "dietarySodium": "Sodium",
-    "dietaryWater": "Water",
-    "dietaryCaffeine": "Caffeine",
+    # Nutrition (dietary intake — distinct from blood test biomarkers)
+    "dietaryEnergyConsumed": "Dietary Calories",
+    "dietaryProtein": "Dietary Protein",
+    "dietaryCarbohydrates": "Dietary Carbs",
+    "dietaryFatTotal": "Dietary Fat",
+    "dietaryFiber": "Dietary Fibre",
+    "dietarySugar": "Dietary Sugar",
+    "dietarySodium": "Dietary Sodium",
+    "dietaryWater": "Dietary Water",
+    "dietaryCaffeine": "Dietary Caffeine",
     # Dietary Micronutrients
-    "dietaryCholesterol": "Cholesterol (Dietary)",
-    "dietaryCalcium": "Calcium",
-    "dietaryIron": "Iron",
-    "dietaryPotassium": "Potassium",
-    "dietaryVitaminC": "Vitamin C",
-    "dietaryVitaminD": "Vitamin D",
-    "dietaryMagnesium": "Magnesium",
-    "dietaryZinc": "Zinc",
-    "dietaryFolate": "Folate",
-    "dietaryVitaminA": "Vitamin A",
-    "dietaryVitaminB12": "Vitamin B12",
+    "dietaryCholesterol": "Dietary Cholesterol",
+    "dietaryCalcium": "Dietary Calcium",
+    "dietaryIron": "Dietary Iron",
+    "dietaryPotassium": "Dietary Potassium",
+    "dietaryVitaminC": "Dietary Vitamin C",
+    "dietaryVitaminD": "Dietary Vitamin D",
+    "dietaryMagnesium": "Dietary Magnesium",
+    "dietaryZinc": "Dietary Zinc",
+    "dietaryFolate": "Dietary Folate",
+    "dietaryVitaminA": "Dietary Vitamin A",
+    "dietaryVitaminB12": "Dietary Vitamin B12",
     # Audio Exposure
     "environmentalAudioExposure": "Environmental Audio Exposure",
     "headphoneAudioExposure": "Headphone Audio Exposure",
@@ -192,7 +192,7 @@ APPLE_HEALTH_ARTEFACT = {
     "HRV (SDNN)": lambda v: v < 0 or v > 300,
     "VO2 Max": lambda v: v < 10 or v > 80,
     "Walking Heart Rate": lambda v: v < 30 or v > 200,
-    "Blood Oxygen": lambda v: v < 0.5 or v > 1.0,
+    "Blood Oxygen": lambda v: v < 50 or v > 100,
     "Respiratory Rate": lambda v: v < 4 or v > 60,
     "Blood Pressure Systolic": lambda v: v < 50 or v > 300,
     "Blood Pressure Diastolic": lambda v: v < 20 or v > 200,
@@ -218,9 +218,9 @@ APPLE_HEALTH_ARTEFACT = {
     # Mobility & Gait
     "Walking Speed": lambda v: v < 0 or v > 5,
     "Walking Step Length": lambda v: v < 10 or v > 200,
-    "Double Support %": lambda v: v < 0 or v > 1.0,
-    "Walking Asymmetry %": lambda v: v < 0 or v > 1.0,
-    "Walking Steadiness": lambda v: v < 0 or v > 1.0,
+    "Double Support %": lambda v: v < 0 or v > 100,
+    "Walking Asymmetry %": lambda v: v < 0 or v > 100,
+    "Walking Steadiness": lambda v: v < 0 or v > 100,
     "Stair Ascent Speed": lambda v: v < 0 or v > 5,
     "Stair Descent Speed": lambda v: v < 0 or v > 5,
     "6-Min Walk Distance": lambda v: v < 0 or v > 1000,
@@ -236,6 +236,7 @@ APPLE_HEALTH_ARTEFACT = {
     "Cycling Cadence": lambda v: v < 0 or v > 200,
     "Cycling FTP": lambda v: v < 0 or v > 600,
     # Body Composition
+    "Body Fat %": lambda v: v < 1 or v > 60,
     "Lean Body Mass": lambda v: v < 20 or v > 150,
     "BMI": lambda v: v < 10 or v > 80,
     "Height": lambda v: v < 50 or v > 250,
@@ -243,29 +244,29 @@ APPLE_HEALTH_ARTEFACT = {
     # Vitals
     "Sleeping Wrist Temperature": lambda v: v < -5 or v > 5,
     "Blood Glucose": lambda v: v < 20 or v > 600,
-    "Perfusion Index": lambda v: v < 0 or v > 0.20,
-    # Nutrition
-    "Calories In": lambda v: v < 0 or v > 10000,
-    "Protein": lambda v: v < 0 or v > 1000,
-    "Carbs": lambda v: v < 0 or v > 2000,
-    "Fat": lambda v: v < 0 or v > 1000,
-    "Fibre": lambda v: v < 0 or v > 500,
-    "Sugar": lambda v: v < 0 or v > 2000,
-    "Sodium": lambda v: v < 0 or v > 10000,
-    "Water": lambda v: v < 0 or v > 20,
-    "Caffeine": lambda v: v < 0 or v > 2000,
+    "Perfusion Index": lambda v: v < 0 or v > 20,
+    # Nutrition (dietary intake)
+    "Dietary Calories": lambda v: v < 0 or v > 10000,
+    "Dietary Protein": lambda v: v < 0 or v > 1000,
+    "Dietary Carbs": lambda v: v < 0 or v > 2000,
+    "Dietary Fat": lambda v: v < 0 or v > 1000,
+    "Dietary Fibre": lambda v: v < 0 or v > 500,
+    "Dietary Sugar": lambda v: v < 0 or v > 2000,
+    "Dietary Sodium": lambda v: v < 0 or v > 10000,
+    "Dietary Water": lambda v: v < 0 or v > 20,
+    "Dietary Caffeine": lambda v: v < 0 or v > 2000,
     # Dietary Micronutrients
-    "Cholesterol (Dietary)": lambda v: v < 0 or v > 2000,
-    "Calcium": lambda v: v < 0 or v > 5000,
-    "Iron": lambda v: v < 0 or v > 200,
-    "Potassium": lambda v: v < 0 or v > 10000,
-    "Vitamin C": lambda v: v < 0 or v > 10000,
-    "Vitamin D": lambda v: v < 0 or v > 10000,
-    "Magnesium": lambda v: v < 0 or v > 5000,
-    "Zinc": lambda v: v < 0 or v > 500,
-    "Folate": lambda v: v < 0 or v > 10000,
-    "Vitamin A": lambda v: v < 0 or v > 50000,
-    "Vitamin B12": lambda v: v < 0 or v > 10000,
+    "Dietary Cholesterol": lambda v: v < 0 or v > 2000,
+    "Dietary Calcium": lambda v: v < 0 or v > 5000,
+    "Dietary Iron": lambda v: v < 0 or v > 200,
+    "Dietary Potassium": lambda v: v < 0 or v > 10000,
+    "Dietary Vitamin C": lambda v: v < 0 or v > 10000,
+    "Dietary Vitamin D": lambda v: v < 0 or v > 10000,
+    "Dietary Magnesium": lambda v: v < 0 or v > 5000,
+    "Dietary Zinc": lambda v: v < 0 or v > 500,
+    "Dietary Folate": lambda v: v < 0 or v > 10000,
+    "Dietary Vitamin A": lambda v: v < 0 or v > 50000,
+    "Dietary Vitamin B12": lambda v: v < 0 or v > 10000,
     # Audio Exposure
     "Environmental Audio Exposure": lambda v: v < 0 or v > 150,
     "Headphone Audio Exposure": lambda v: v < 0 or v > 150,
@@ -333,28 +334,28 @@ APPLE_HEALTH_CATEGORY = {
     "BMI": "Body Composition",
     "Height": "Body Composition",
     "Waist Circumference": "Body Composition",
-    # Nutrition
-    "Calories In": "Nutrition",
-    "Protein": "Nutrition",
-    "Carbs": "Nutrition",
-    "Fat": "Nutrition",
-    "Fibre": "Nutrition",
-    "Sugar": "Nutrition",
-    "Sodium": "Nutrition",
-    "Water": "Nutrition",
-    "Caffeine": "Nutrition",
+    # Nutrition (dietary intake)
+    "Dietary Calories": "Nutrition",
+    "Dietary Protein": "Nutrition",
+    "Dietary Carbs": "Nutrition",
+    "Dietary Fat": "Nutrition",
+    "Dietary Fibre": "Nutrition",
+    "Dietary Sugar": "Nutrition",
+    "Dietary Sodium": "Nutrition",
+    "Dietary Water": "Nutrition",
+    "Dietary Caffeine": "Nutrition",
     # Dietary Micronutrients
-    "Cholesterol (Dietary)": "Micronutrients",
-    "Calcium": "Micronutrients",
-    "Iron": "Micronutrients",
-    "Potassium": "Micronutrients",
-    "Vitamin C": "Micronutrients",
-    "Vitamin D": "Micronutrients",
-    "Magnesium": "Micronutrients",
-    "Zinc": "Micronutrients",
-    "Folate": "Micronutrients",
-    "Vitamin A": "Micronutrients",
-    "Vitamin B12": "Micronutrients",
+    "Dietary Cholesterol": "Micronutrients",
+    "Dietary Calcium": "Micronutrients",
+    "Dietary Iron": "Micronutrients",
+    "Dietary Potassium": "Micronutrients",
+    "Dietary Vitamin C": "Micronutrients",
+    "Dietary Vitamin D": "Micronutrients",
+    "Dietary Magnesium": "Micronutrients",
+    "Dietary Zinc": "Micronutrients",
+    "Dietary Folate": "Micronutrients",
+    "Dietary Vitamin A": "Micronutrients",
+    "Dietary Vitamin B12": "Micronutrients",
     # Audio Exposure
     "Environmental Audio Exposure": "Audio",
     "Headphone Audio Exposure": "Audio",
@@ -1634,6 +1635,20 @@ TOOLS = [
             "properties": {
                 "biomarker": {"type": "string", "description": "Biomarker name (fuzzy matched). If omitted, regenerates all flagged."},
                 "include_context": {"type": "boolean", "description": "Include events, phase, and goals as context (default: true)."},
+            },
+        },
+    },
+    {
+        "name": "migrate_dietary_names",
+        "description": (
+            "Migrate old dietary metric names to new 'Dietary ...' naming convention. "
+            "Renames measurements and biomarkers that used short names (e.g. 'Iron' -> 'Dietary Iron') "
+            "for Apple Health dietary sources. Idempotent — safe to run multiple times."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "dry_run": {"type": "boolean", "description": "If true, report what would change without writing. Default: false."},
             },
         },
     },
@@ -3928,6 +3943,91 @@ Provide a 2-3 sentence interpretation covering current status, trend, and one ac
     return {"status": "ok", "generated": generated}
 
 
+# Old -> New dietary metric name mapping (from Apple Health sources)
+_DIETARY_NAME_MIGRATION = {
+    "Calories In": "Dietary Calories",
+    "Protein": "Dietary Protein",
+    "Carbs": "Dietary Carbs",
+    "Fat": "Dietary Fat",
+    "Fibre": "Dietary Fibre",
+    "Sugar": "Dietary Sugar",
+    "Sodium": "Dietary Sodium",
+    "Water": "Dietary Water",
+    "Caffeine": "Dietary Caffeine",
+    "Cholesterol (Dietary)": "Dietary Cholesterol",
+    "Calcium": "Dietary Calcium",
+    "Iron": "Dietary Iron",
+    "Potassium": "Dietary Potassium",
+    "Vitamin C": "Dietary Vitamin C",
+    "Vitamin D": "Dietary Vitamin D",
+    "Magnesium": "Dietary Magnesium",
+    "Zinc": "Dietary Zinc",
+    "Folate": "Dietary Folate",
+    "Vitamin A": "Dietary Vitamin A",
+    "Vitamin B12": "Dietary Vitamin B12",
+}
+
+_DIETARY_NEW_NAMES = set(_DIETARY_NAME_MIGRATION.values())
+
+
+def _is_dietary_source(measurement):
+    """Check if a measurement came from Apple Health dietary tracking."""
+    source = measurement.get("source", "")
+    return source in ("apple_health", "Apple Health", "HealthKit")
+
+
+def tool_migrate_dietary_names(args):
+    """Rename old dietary metric names to 'Dietary ...' convention in S3 data."""
+    dry_run = args.get("dry_run", False)
+    data = _load_data()
+    bw = data["bloodwork"]
+
+    renamed_measurements = 0
+    renamed_biomarkers = 0
+    changes = []
+
+    # 1. Rename measurements
+    for m in bw.get("measurements", []):
+        old_name = m.get("name", "")
+        if old_name in _DIETARY_NAME_MIGRATION:
+            if _is_dietary_source(m):
+                new_name = _DIETARY_NAME_MIGRATION[old_name]
+                if not dry_run:
+                    m["name"] = new_name
+                renamed_measurements += 1
+                changes.append(f"measurement: '{old_name}' -> '{new_name}' ({m.get('date', '?')})")
+
+    # 2. Rename biomarkers
+    for b in bw.get("biomarkers", []):
+        old_name = b.get("name", "")
+        if old_name in _DIETARY_NAME_MIGRATION:
+            new_name = _DIETARY_NAME_MIGRATION[old_name]
+            has_dietary = any(
+                m.get("name", "") == old_name and _is_dietary_source(m)
+                for m in bw.get("measurements", [])
+            )
+            has_renamed = any(
+                m.get("name", "") == new_name
+                for m in bw.get("measurements", [])
+            )
+            if has_dietary or has_renamed:
+                if not dry_run:
+                    b["name"] = new_name
+                renamed_biomarkers += 1
+                changes.append(f"biomarker: '{old_name}' -> '{new_name}'")
+
+    if not dry_run and (renamed_measurements > 0 or renamed_biomarkers > 0):
+        _write_s3(BLOODWORK_KEY, bw)
+
+    return {
+        "status": "dry_run" if dry_run else "ok",
+        "renamed_measurements": renamed_measurements,
+        "renamed_biomarkers": renamed_biomarkers,
+        "changes": changes[:50],
+        "total_changes": len(changes),
+    }
+
+
 # ── Tool dispatch table ─────────────────────────────────────────────────────
 
 TOOL_DISPATCH = {
@@ -3972,6 +4072,7 @@ TOOL_DISPATCH = {
     "get_health_scores": tool_get_health_scores,
     "get_goal_progress": tool_get_goal_progress,
     "generate_insights": tool_generate_insights,
+    "migrate_dietary_names": tool_migrate_dietary_names,
 }
 
 # ── Session tracking ─────────────────────────────────────────────────────────

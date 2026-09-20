@@ -12,13 +12,30 @@ import json, time, subprocess, sys, os, base64, hashlib, tempfile
 from pathlib import Path
 from datetime import datetime, timezone
 
+# ── Load .env from project root ────────────────────────────────────
+SCRIPT_DIR = Path(__file__).parent
+PROJECT_ROOT = SCRIPT_DIR.parent
+_dotenv = PROJECT_ROOT / ".env"
+if _dotenv.exists():
+    for _line in _dotenv.read_text().splitlines():
+        _line = _line.strip()
+        if _line and not _line.startswith("#") and "=" in _line:
+            _k, _v = _line.split("=", 1)
+            os.environ.setdefault(_k.strip(), _v.strip())
+
 # ── Config ──────────────────────────────────────────────────────────
-TEAM_ID = "4A3MTWC6CT"
-BUNDLE_ID = "com.stevenbennett.healthdashboard"
-KEY_ID = os.environ.get("ASC_KEY_ID", "RNCRJVPMK8")
+TEAM_ID = os.environ.get("HD_DEVELOPMENT_TEAM", "")
+BUNDLE_ID = os.environ.get("HD_BUNDLE_ID", "")
+KEY_ID = os.environ.get("ASC_KEY_ID", os.environ.get("HD_ASC_KEY_ID", ""))
 ISSUER_ID = os.environ.get("ASC_ISSUER_ID", "")
 
-SCRIPT_DIR = Path(__file__).parent
+if not TEAM_ID:
+    die("HD_DEVELOPMENT_TEAM not set. Run setup.sh first.")
+if not BUNDLE_ID:
+    die("HD_BUNDLE_ID not set. Run setup.sh first.")
+if not KEY_ID:
+    die("HD_ASC_KEY_ID not set. Run setup.sh first.")
+
 ENV_FILE = SCRIPT_DIR / ".testflight.env"
 KEY_PATHS = [
     Path.home() / "private_keys" / f"AuthKey_{KEY_ID}.p8",
@@ -214,7 +231,7 @@ def main():
             subprocess.run([
                 "openssl", "req", "-new", "-newkey", "rsa:2048", "-nodes",
                 "-keyout", key_file.name, "-out", csr_file.name,
-                "-subj", "/CN=HealthDashboard Distribution/O=Steven Bennett/C=GB"
+                "-subj", "/CN=HealthDashboard Distribution"
             ], capture_output=True, check=True)
 
             csr_content = Path(csr_file.name).read_text()

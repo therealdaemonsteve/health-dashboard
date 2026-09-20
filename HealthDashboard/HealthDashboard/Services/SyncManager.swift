@@ -21,7 +21,7 @@ final class SyncManager {
     var recordsImportedSoFar: Int = 0
     var recordsSkippedSoFar: Int = 0
 
-    private let logger = Logger(subsystem: "com.stevenbennett.healthdashboard", category: "Sync")
+    private let logger = Logger(subsystem: AppConstants.bundleIdentifier, category: "Sync")
 
     init() {
         loadLastSyncDate()
@@ -90,12 +90,17 @@ final class SyncManager {
             totalBatches = batches.count
             batchesSent = 0
 
-            // Upload batches concurrently (limited concurrency)
-            let results = try await uploadBatchesConcurrently(batches: batches)
-            for result in results {
-                totalSent += result.sent
-                totalImported += result.imported
-                totalSkipped += result.skipped
+            for (index, batch) in batches.enumerated() {
+                syncDetail = "Batch \(index + 1) of \(batches.count)"
+
+                let response = try await sendBatchWithRetry(batch, batchIndex: index)
+                totalSent += batch.count
+                totalImported += response.imported ?? 0
+                totalSkipped += response.skippedDuplicate ?? 0
+
+                batchesSent = index + 1
+                recordsImportedSoFar = totalImported
+                recordsSkippedSoFar = totalSkipped
             }
 
             let duration = Date().timeIntervalSince(startTime)
@@ -188,65 +193,13 @@ final class SyncManager {
         return allRecords
     }
 
-    // MARK: - Concurrent Batch Upload
-
-    private struct UploadResult: Sendable {
-        let sent: Int
-        let imported: Int
-        let skipped: Int
-    }
-
-    private func uploadBatchesConcurrently(batches: [[HealthRecord]]) async throws -> [UploadResult] {
-        let maxConcurrent = AppConstants.maxConcurrentUploads
-
-        // Process in waves of maxConcurrent
-        var allResults: [UploadResult] = []
-        var batchIndex = 0
-
-        while batchIndex < batches.count {
-            let end = min(batchIndex + maxConcurrent, batches.count)
-            let wave = Array(batches[batchIndex..<end])
-
-            let waveResults: [UploadResult] = try await withThrowingTaskGroup(of: UploadResult.self) { group in
-                for (offset, batch) in wave.enumerated() {
-                    let idx = batchIndex + offset
-                    group.addTask {
-                        let response = try await self.sendBatchWithRetry(batch, batchIndex: idx)
-                        return UploadResult(
-                            sent: batch.count,
-                            imported: response.imported ?? 0,
-                            skipped: response.skippedDuplicate ?? 0
-                        )
-                    }
-                }
-
-                var results: [UploadResult] = []
-                for try await result in group {
-                    results.append(result)
-                    await MainActor.run {
-                        self.batchesSent += 1
-                        self.recordsImportedSoFar += result.imported
-                        self.recordsSkippedSoFar += result.skipped
-                        self.syncDetail = "Batch \(self.batchesSent) of \(batches.count)"
-                    }
-                }
-                return results
-            }
-
-            allResults.append(contentsOf: waveResults)
-            batchIndex = end
-        }
-
-        return allResults
-    }
-
     // MARK: - Batch Send with Retry
 
     private nonisolated func sendBatchWithRetry(
         _ batch: [HealthRecord],
         batchIndex: Int
     ) async throws -> AppleHealthImportResponse {
-        let logger = Logger(subsystem: "com.stevenbennett.healthdashboard", category: "Sync")
+        let logger = Logger(subsystem: AppConstants.bundleIdentifier, category: "Sync")
         var lastError: Error?
 
         for attempt in 0..<AppConstants.maxRetries {

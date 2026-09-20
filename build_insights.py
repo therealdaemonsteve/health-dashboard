@@ -8,7 +8,7 @@ import os
 from datetime import date, datetime
 from statistics import mean, median
 
-OUTPUTS = "/Users/stevenbennett/claude/health-dashboard"
+OUTPUTS = os.environ.get("HEALTH_DASHBOARD_DIR", os.path.dirname(os.path.abspath(__file__)))
 
 # ---------------------------------------------------------------------------
 # Reference ranges (adult male, fasting where relevant). Each entry has:

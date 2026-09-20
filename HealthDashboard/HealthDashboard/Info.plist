@@ -4,13 +4,13 @@
 <dict>
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
-		<string>com.stevenbennett.healthdashboard.healthsync</string>
+		<string>$(HD_BG_TASK_ID)</string>
 	</array>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
 			<key>CFBundleURLName</key>
-			<string>com.stevenbennett.healthdashboard.oauth</string>
+			<string>$(PRODUCT_BUNDLE_IDENTIFIER).oauth</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>healthdashboard</string>
@@ -22,5 +22,11 @@
 		<string>fetch</string>
 		<string>processing</string>
 	</array>
+	<key>HDApiBaseURL</key>
+	<string>$(HD_API_BASE_URL)</string>
+	<key>HDUserId</key>
+	<string>$(HD_USER_ID)</string>
+	<key>HDBgTaskId</key>
+	<string>$(HD_BG_TASK_ID)</string>
 </dict>
 </plist>

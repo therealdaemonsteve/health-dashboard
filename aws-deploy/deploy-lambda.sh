@@ -7,6 +7,10 @@ set -euo pipefail
 #  Run AFTER deploy.sh (needs DIST_DOMAIN in .deploy-config)
 # ─────────────────────────────────────────────
 
+# ── Source .env if present ───────────────────
+ENV_FILE="$(cd "$(dirname "$0")/.." && pwd)/.env"
+[[ -f "$ENV_FILE" ]] && { set -a; source "$ENV_FILE"; set +a; }
+
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 CONFIG_FILE="$SCRIPT_DIR/.deploy-config"
 

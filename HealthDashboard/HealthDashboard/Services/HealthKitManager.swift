@@ -5,7 +5,7 @@ actor HealthKitManager {
     static let shared = HealthKitManager()
 
     private let healthStore = HKHealthStore()
-    private let logger = Logger(subsystem: "com.stevenbennett.healthdashboard", category: "HealthKit")
+    private let logger = Logger(subsystem: AppConstants.bundleIdentifier, category: "HealthKit")
 
     // MARK: - Availability & Authorisation
 
@@ -113,7 +113,9 @@ actor HealthKitManager {
                     }
 
                     guard let quantity else { return }
-                    let value = quantity.doubleValue(for: config.unit)
+                    var value = quantity.doubleValue(for: config.unit)
+                    // HKUnit.percent() returns 0-1 range; convert to 0-100 for display
+                    if config.unit == .percent() { value *= 100 }
                     guard value > 0 else { return }
 
                     records.append(HealthRecord(
@@ -174,9 +176,12 @@ actor HealthKitManager {
                 formatter.formatOptions = [.withInternetDateTime]
 
                 let records = samples.map { sample in
-                    HealthRecord(
+                    var value = sample.quantity.doubleValue(for: config.unit)
+                    // HKUnit.percent() returns 0-1 range; convert to 0-100 for display
+                    if config.unit == .percent() { value *= 100 }
+                    return HealthRecord(
                         metric: config.metricKey,
-                        value: sample.quantity.doubleValue(for: config.unit),
+                        value: value,
                         date: formatter.string(from: sample.startDate),
                         unit: config.unitString
                     )

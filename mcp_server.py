@@ -19,7 +19,9 @@ from typing import Optional
 import boto3
 from fastmcp import FastMCP
 
-S3_BUCKET = os.environ.get("S3_BUCKET", "YOUR_BUCKET_NAME")
+S3_BUCKET = os.environ.get("S3_BUCKET", "")
+if not S3_BUCKET:
+    raise RuntimeError("S3_BUCKET environment variable is required")
 S3_REGION = os.environ.get("S3_REGION", "eu-west-2")
 BLOODWORK_KEY = "bloodwork_data.json"
 EVENTS_KEY = "events.json"

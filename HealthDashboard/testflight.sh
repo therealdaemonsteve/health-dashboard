@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# ── Source .env if present ──────────────────────────────────────────
+ENV_FILE="$(cd "$(dirname "$0")/.." && pwd)/.env"
+[[ -f "$ENV_FILE" ]] && { set -a; source "$ENV_FILE"; set +a; }
+
 # ── Config ──────────────────────────────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT="$SCRIPT_DIR/HealthDashboard.xcodeproj"
 SCHEME="HealthDashboard"
-TEAM_ID="NFCAA5HL6S"
+TEAM_ID="${HD_DEVELOPMENT_TEAM:?Run setup.sh first}"
 EXPORT_OPTIONS="$SCRIPT_DIR/ExportOptions.plist"
 CONFIG_FILE="$SCRIPT_DIR/.testflight.env"
 
@@ -14,7 +18,7 @@ ARCHIVE_PATH="$ARCHIVE_DIR/HealthDashboard.xcarchive"
 EXPORT_DIR="$ARCHIVE_DIR/export"
 
 # App Store Connect API key for upload
-ASC_KEY_ID="${ASC_KEY_ID:-RNCRJVPMK8}"
+ASC_KEY_ID="${ASC_KEY_ID:-${HD_ASC_KEY_ID:?Run setup.sh first}}"
 ASC_KEY_PATH="${ASC_KEY_PATH:-$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8}"
 ASC_ISSUER_ID="${ASC_ISSUER_ID:-}"
 
