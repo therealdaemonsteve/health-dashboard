@@ -24,7 +24,15 @@ struct SyncLogEntry: Codable, Identifiable {
         case workoutDelivery
         case nutritionDelivery
         case appLaunch
+        case fullSync
+        case resumeFullSync
     }
+}
+
+struct FullSyncCache: Codable {
+    let records: [HealthRecord]
+    var batchesSent: Int
+    let totalBatches: Int
 }
 
 struct AppleHealthImportResponse: Codable {

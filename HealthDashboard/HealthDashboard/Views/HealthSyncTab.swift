@@ -2,7 +2,7 @@ import SwiftUI
 
 struct HealthSyncTab: View {
     @State private var syncManager = SyncManager.shared
-    @State private var showingResetAlert = false
+    @State private var showingFullSyncAlert = false
 
     var body: some View {
         NavigationStack {
@@ -19,14 +19,26 @@ struct HealthSyncTab: View {
                             await syncManager.performSync(trigger: .manual)
                         }
                     } label: {
-                        Label("Sync Now", systemImage: "arrow.triangle.2.circlepath")
+                        Label("Sync Recent Data", systemImage: "arrow.triangle.2.circlepath")
                     }
                     .disabled(syncManager.isSyncing)
 
-                    Button(role: .destructive) {
-                        showingResetAlert = true
+                    Button {
+                        showingFullSyncAlert = true
                     } label: {
-                        Label("Reset Sync Anchors", systemImage: "arrow.counterclockwise")
+                        Label("Full Sync", systemImage: "arrow.clockwise.circle")
+                    }
+                    .disabled(syncManager.isSyncing)
+
+                    if syncManager.hasResumableSync {
+                        Button {
+                            Task {
+                                await syncManager.resumeFullSync(trigger: .resumeFullSync)
+                            }
+                        } label: {
+                            Label("Resume Full Sync", systemImage: "play.circle")
+                        }
+                        .disabled(syncManager.isSyncing)
                     }
                 }
 
@@ -46,17 +58,16 @@ struct HealthSyncTab: View {
             .refreshable {
                 await syncManager.performSync(trigger: .manual)
             }
-            .alert("Reset Anchors?", isPresented: $showingResetAlert) {
-                Button("Reset & Sync", role: .destructive) {
-                    resetAnchors()
+            .alert("Full Sync?", isPresented: $showingFullSyncAlert) {
+                Button("Start Full Sync", role: .destructive) {
                     Task {
-                        await syncManager.performSync(trigger: .manual)
+                        await syncManager.performFullSync(trigger: .fullSync)
                     }
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
                 Text(
-                    "This will resend all historical health data on the next sync. The backend handles deduplication, so no data will be lost."
+                    "This will clear all sync anchors and re-fetch your entire health history. The backend handles deduplication, so no data will be lost."
                 )
             }
         }
@@ -182,14 +193,6 @@ struct HealthSyncTab: View {
         }
     }
 
-    private func resetAnchors() {
-        for config in HealthKitTypeRegistry.allConfigs {
-            let anchorKey = AppConstants.syncAnchorPrefix + config.metricKey
-            UserDefaults.standard.removeObject(forKey: anchorKey)
-            let dateKey = AppConstants.aggregatedSyncDatePrefix + config.metricKey
-            UserDefaults.standard.removeObject(forKey: dateKey)
-        }
-    }
 }
 
 // MARK: - Sync Log Row
@@ -244,6 +247,8 @@ private struct SyncLogRow: View {
         case .workoutDelivery: return "Workout"
         case .nutritionDelivery: return "Nutrition"
         case .appLaunch: return "Launch"
+        case .fullSync: return "Full"
+        case .resumeFullSync: return "Resume"
         }
     }
 }

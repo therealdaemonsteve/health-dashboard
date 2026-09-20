@@ -44,6 +44,17 @@ final class SyncManager {
         return nil
     }
 
+    // MARK: - Full Sync Cache
+
+    var hasResumableSync: Bool {
+        FileManager.default.fileExists(atPath: fullSyncCacheURL.path)
+    }
+
+    private var fullSyncCacheURL: URL {
+        FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("full_sync_cache.json")
+    }
+
     private let logger = Logger(subsystem: AppConstants.bundleIdentifier, category: "Sync")
 
     init() {
@@ -65,7 +76,7 @@ final class SyncManager {
         uploadStartTime = nil
     }
 
-    // MARK: - Full Sync
+    // MARK: - Delta Sync (Recent Data)
 
     func performSync(trigger: SyncLogEntry.SyncTrigger) async {
         guard !isSyncing else {
@@ -87,7 +98,6 @@ final class SyncManager {
         totalTypes = allConfigs.count
 
         do {
-            // Fetch all HealthKit types concurrently
             let allRecords = try await fetchAllTypesConcurrently(configs: allConfigs)
 
             typesProcessed = allConfigs.count
@@ -109,26 +119,12 @@ final class SyncManager {
             }
 
             let batches = allRecords.chunked(into: AppConstants.batchSize)
-            logger.info("Sending \(allRecords.count) records in \(batches.count) batches")
-
-            syncPhase = "Uploading records"
-            syncDetail = "\(allRecords.count) records"
-            totalBatches = batches.count
-            batchesSent = 0
-            uploadStartTime = Date()
-
-            for (index, batch) in batches.enumerated() {
-                syncDetail = "Batch \(index + 1) of \(batches.count)"
-
-                let response = try await sendBatchWithRetry(batch, batchIndex: index)
-                totalSent += batch.count
-                totalImported += response.imported ?? 0
-                totalSkipped += response.skippedDuplicate ?? 0
-
-                batchesSent = index + 1
-                recordsImportedSoFar = totalImported
-                recordsSkippedSoFar = totalSkipped
-            }
+            let result = try await uploadBatches(
+                batches, startingFrom: 0, persistProgress: false
+            )
+            totalSent = result.sent
+            totalImported = result.imported
+            totalSkipped = result.skipped
 
             let duration = Date().timeIntervalSince(startTime)
             logger.info(
@@ -156,6 +152,225 @@ final class SyncManager {
             duration: Date().timeIntervalSince(startTime),
             success: syncError == nil, errorMessage: syncError
         ))
+    }
+
+    // MARK: - Full Sync
+
+    func performFullSync(trigger: SyncLogEntry.SyncTrigger) async {
+        guard !isSyncing else {
+            logger.info("Sync already in progress, skipping")
+            return
+        }
+
+        isSyncing = true
+        resetProgress()
+        let startTime = Date()
+        syncStartTime = startTime
+        var totalSent = 0
+        var totalImported = 0
+        var totalSkipped = 0
+        var syncError: String?
+
+        do {
+            // 1. Delete any existing cache (fresh start)
+            deleteFullSyncCache()
+
+            // 2. Clear all anchors and sync dates
+            clearAllAnchors()
+
+            // 3. Fetch all types
+            let allConfigs = HealthKitTypeRegistry.allConfigs
+            syncPhase = "Fetching all health data"
+            totalTypes = allConfigs.count
+
+            let allRecords = try await fetchAllTypesConcurrently(configs: allConfigs)
+
+            typesProcessed = allConfigs.count
+
+            if allRecords.isEmpty {
+                logger.info("Full sync: no records found")
+                lastSyncResult = "No data found"
+                lastSyncDate = Date()
+                isSyncing = false
+                resetProgress()
+                saveLastSyncDate()
+                addSyncLog(SyncLogEntry(
+                    id: UUID(), timestamp: Date(), trigger: trigger,
+                    recordsSent: 0, recordsImported: 0, skippedDuplicate: 0,
+                    duration: Date().timeIntervalSince(startTime),
+                    success: true, errorMessage: nil
+                ))
+                return
+            }
+
+            // 4. Save cache before uploading
+            let batches = allRecords.chunked(into: AppConstants.batchSize)
+            let cache = FullSyncCache(
+                records: allRecords, batchesSent: 0, totalBatches: batches.count
+            )
+            saveFullSyncCache(cache)
+            logger.info("Full sync: cached \(allRecords.count) records in \(batches.count) batches")
+
+            // 5. Upload batches, persisting progress
+            let result = try await uploadBatches(
+                batches, startingFrom: 0, persistProgress: true
+            )
+            totalSent = result.sent
+            totalImported = result.imported
+            totalSkipped = result.skipped
+
+            // 6. Success — delete cache
+            deleteFullSyncCache()
+
+            let duration = Date().timeIntervalSince(startTime)
+            logger.info(
+                "Full sync complete: \(totalImported) imported, \(totalSkipped) skipped in \(String(format: "%.1f", duration))s"
+            )
+
+            lastSyncResult = "\(totalImported) imported, \(totalSkipped) duplicates"
+            lastSyncDate = Date()
+            isSyncing = false
+            resetProgress()
+            saveLastSyncDate()
+
+        } catch {
+            // 7. Failure — cache persists for resume
+            syncError = error.localizedDescription
+            logger.error("Full sync failed: \(error)")
+            lastSyncResult = "Error: \(error.localizedDescription)"
+            isSyncing = false
+            resetProgress()
+        }
+
+        addSyncLog(SyncLogEntry(
+            id: UUID(), timestamp: Date(), trigger: trigger,
+            recordsSent: totalSent, recordsImported: totalImported,
+            skippedDuplicate: totalSkipped,
+            duration: Date().timeIntervalSince(startTime),
+            success: syncError == nil, errorMessage: syncError
+        ))
+    }
+
+    // MARK: - Resume Full Sync
+
+    func resumeFullSync(trigger: SyncLogEntry.SyncTrigger) async {
+        guard !isSyncing else {
+            logger.info("Sync already in progress, skipping")
+            return
+        }
+
+        guard let cache = loadFullSyncCache() else {
+            logger.warning("Resume requested but no cache found")
+            lastSyncResult = "No resumable sync found"
+            return
+        }
+
+        isSyncing = true
+        resetProgress()
+        let startTime = Date()
+        syncStartTime = startTime
+        var totalSent = 0
+        var totalImported = 0
+        var totalSkipped = 0
+        var syncError: String?
+
+        do {
+            let batches = cache.records.chunked(into: AppConstants.batchSize)
+            let startBatch = cache.batchesSent
+            logger.info(
+                "Resuming full sync from batch \(startBatch + 1) of \(batches.count)"
+            )
+
+            syncPhase = "Resuming upload"
+
+            let result = try await uploadBatches(
+                batches, startingFrom: startBatch, persistProgress: true
+            )
+            totalSent = result.sent
+            totalImported = result.imported
+            totalSkipped = result.skipped
+
+            // Success — delete cache
+            deleteFullSyncCache()
+
+            let duration = Date().timeIntervalSince(startTime)
+            logger.info(
+                "Resume sync complete: \(totalImported) imported, \(totalSkipped) skipped in \(String(format: "%.1f", duration))s"
+            )
+
+            lastSyncResult = "\(totalImported) imported, \(totalSkipped) duplicates"
+            lastSyncDate = Date()
+            isSyncing = false
+            resetProgress()
+            saveLastSyncDate()
+
+        } catch {
+            // Cache persists for another resume attempt
+            syncError = error.localizedDescription
+            logger.error("Resume sync failed: \(error)")
+            lastSyncResult = "Error: \(error.localizedDescription)"
+            isSyncing = false
+            resetProgress()
+        }
+
+        addSyncLog(SyncLogEntry(
+            id: UUID(), timestamp: Date(), trigger: trigger,
+            recordsSent: totalSent, recordsImported: totalImported,
+            skippedDuplicate: totalSkipped,
+            duration: Date().timeIntervalSince(startTime),
+            success: syncError == nil, errorMessage: syncError
+        ))
+    }
+
+    // MARK: - Shared Upload
+
+    private func uploadBatches(
+        _ batches: [[HealthRecord]],
+        startingFrom startBatch: Int,
+        persistProgress: Bool
+    ) async throws -> (sent: Int, imported: Int, skipped: Int) {
+        let totalRecords = batches.flatMap { $0 }.count
+
+        syncPhase = "Uploading records"
+        syncDetail = "\(totalRecords) records"
+        totalBatches = batches.count
+        batchesSent = startBatch
+        uploadStartTime = Date()
+
+        var sent = 0
+        var imported = 0
+        var skipped = 0
+
+        for index in startBatch..<batches.count {
+            let batch = batches[index]
+            syncDetail = "Batch \(index + 1) of \(batches.count)"
+
+            let response = try await sendBatchWithRetry(batch, batchIndex: index)
+            sent += batch.count
+            imported += response.imported ?? 0
+            skipped += response.skippedDuplicate ?? 0
+
+            batchesSent = index + 1
+            recordsImportedSoFar = imported
+            recordsSkippedSoFar = skipped
+
+            if persistProgress {
+                updateCacheBatchesSent(index + 1)
+            }
+        }
+
+        return (sent: sent, imported: imported, skipped: skipped)
+    }
+
+    // MARK: - Clear All Anchors
+
+    func clearAllAnchors() {
+        for config in HealthKitTypeRegistry.allConfigs {
+            let anchorKey = AppConstants.syncAnchorPrefix + config.metricKey
+            UserDefaults.standard.removeObject(forKey: anchorKey)
+            let dateKey = AppConstants.aggregatedSyncDatePrefix + config.metricKey
+            UserDefaults.standard.removeObject(forKey: dateKey)
+        }
     }
 
     // MARK: - Concurrent HealthKit Fetch
@@ -245,6 +460,32 @@ final class SyncManager {
         }
 
         throw lastError ?? SyncError.noData
+    }
+
+    // MARK: - Cache Helpers
+
+    private func saveFullSyncCache(_ cache: FullSyncCache) {
+        do {
+            let data = try JSONEncoder().encode(cache)
+            try data.write(to: fullSyncCacheURL, options: .atomic)
+        } catch {
+            logger.error("Failed to save full sync cache: \(error)")
+        }
+    }
+
+    private func loadFullSyncCache() -> FullSyncCache? {
+        guard let data = try? Data(contentsOf: fullSyncCacheURL) else { return nil }
+        return try? JSONDecoder().decode(FullSyncCache.self, from: data)
+    }
+
+    private func deleteFullSyncCache() {
+        try? FileManager.default.removeItem(at: fullSyncCacheURL)
+    }
+
+    private func updateCacheBatchesSent(_ sent: Int) {
+        guard var cache = loadFullSyncCache() else { return }
+        cache.batchesSent = sent
+        saveFullSyncCache(cache)
     }
 
     // MARK: - Persistence

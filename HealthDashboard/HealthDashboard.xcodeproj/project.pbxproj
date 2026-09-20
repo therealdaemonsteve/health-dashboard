@@ -40,6 +40,7 @@
 		AA000032 /* CorrelationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000032 /* CorrelationView.swift */; };
 		AA000033 /* EventImpactView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000033 /* EventImpactView.swift */; };
 		AA000034 /* ServerSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000034 /* ServerSetupView.swift */; };
+		AA000035 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = AB000035 /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -78,6 +79,7 @@
 		AB000032 /* CorrelationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CorrelationView.swift; sourceTree = "<group>"; };
 		AB000033 /* EventImpactView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventImpactView.swift; sourceTree = "<group>"; };
 		AB000034 /* ServerSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerSetupView.swift; sourceTree = "<group>"; };
+		AB000035 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		AB000040 /* UserConfig.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = UserConfig.xcconfig; sourceTree = "<group>"; };
 		AC000001 /* SBHealthDashboard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SBHealthDashboard.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -110,6 +112,7 @@
 				AB000001 /* HealthDashboardApp.swift */,
 				AB000013 /* Info.plist */,
 				AB000028 /* HealthDashboard.entitlements */,
+				AB000035 /* PrivacyInfo.xcprivacy */,
 				AE000007 /* Config */,
 				AE000003 /* Models */,
 				AE000004 /* Services */,
@@ -260,6 +263,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				AA000012 /* Assets.xcassets in Resources */,
+				AA000035 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -435,7 +439,7 @@
 				CODE_SIGN_ENTITLEMENTS = HealthDashboard/HealthDashboard.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 20;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = NFCAA5HL6S;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = HealthDashboard/Info.plist;
@@ -472,7 +476,7 @@
 				CODE_SIGN_ENTITLEMENTS = HealthDashboard/HealthDashboard.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 20;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = NFCAA5HL6S;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = HealthDashboard/Info.plist;
