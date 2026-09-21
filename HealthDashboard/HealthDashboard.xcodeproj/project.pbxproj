@@ -41,6 +41,7 @@
 		AA000033 /* EventImpactView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000033 /* EventImpactView.swift */; };
 		AA000034 /* ServerSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000034 /* ServerSetupView.swift */; };
 		AA000035 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = AB000035 /* PrivacyInfo.xcprivacy */; };
+		AA000036 /* Formatters.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB000036 /* Formatters.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -80,6 +81,7 @@
 		AB000033 /* EventImpactView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventImpactView.swift; sourceTree = "<group>"; };
 		AB000034 /* ServerSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerSetupView.swift; sourceTree = "<group>"; };
 		AB000035 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		AB000036 /* Formatters.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Formatters.swift; sourceTree = "<group>"; };
 		AB000040 /* UserConfig.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = UserConfig.xcconfig; sourceTree = "<group>"; };
 		AC000001 /* SBHealthDashboard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SBHealthDashboard.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -184,6 +186,7 @@
 			isa = PBXGroup;
 			children = (
 				AB000020 /* AppConstants.swift */,
+				AB000036 /* Formatters.swift */,
 			);
 			path = Config;
 			sourceTree = "<group>";
@@ -305,6 +308,7 @@
 				AA000032 /* CorrelationView.swift in Sources */,
 				AA000033 /* EventImpactView.swift in Sources */,
 				AA000034 /* ServerSetupView.swift in Sources */,
+				AA000036 /* Formatters.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -438,7 +442,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = HealthDashboard/HealthDashboard.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = NFCAA5HL6S;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -475,7 +479,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = HealthDashboard/HealthDashboard.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = NFCAA5HL6S;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;

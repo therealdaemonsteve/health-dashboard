@@ -155,7 +155,7 @@ private struct GoalCard: View {
 
                     HStack {
                         if let current = p.currentValue, let target = p.targetValue {
-                            Text("\(formatVal(current)) → \(formatVal(target))")
+                            Text("\(Formatters.value(current)) → \(Formatters.value(target))")
                                 .font(.caption2)
                                 .monospacedDigit()
                                 .foregroundStyle(.secondary)
@@ -207,10 +207,6 @@ private struct GoalCard: View {
         .sheet(isPresented: $showProgressSheet) {
             AddProgressSheet(goal: goal, onSave: onUpdate)
         }
-    }
-
-    private func formatVal(_ v: Double) -> String {
-        v == v.rounded() && abs(v) < 10000 ? String(format: "%.0f", v) : String(format: "%.1f", v)
     }
 
     private func progressColor(pct: Double, status: String?) -> Color {
@@ -392,15 +388,12 @@ struct AddGoalSheet: View {
 
     private func save() async {
         isSaving = true
-        let fmt = DateFormatter()
-        fmt.dateFormat = "yyyy-MM-dd"
-
         _ = try? await MCPClient.shared.addGoal(
             title: title,
             category: category.isEmpty ? nil : category,
             targetValue: Double(targetValue),
             targetUnit: targetUnit.isEmpty ? nil : targetUnit,
-            targetDate: hasTargetDate ? fmt.string(from: targetDate) : nil
+            targetDate: hasTargetDate ? Formatters.dateString(from: targetDate) : nil
         )
         await onSave()
         dismiss()
@@ -456,12 +449,9 @@ struct AddActionSheet: View {
 
     private func save() async {
         isSaving = true
-        let fmt = DateFormatter()
-        fmt.dateFormat = "yyyy-MM-dd"
-
         _ = try? await MCPClient.shared.addActionItem(
             title: title,
-            dueDate: hasDueDate ? fmt.string(from: dueDate) : nil,
+            dueDate: hasDueDate ? Formatters.dateString(from: dueDate) : nil,
             goalId: selectedGoalId
         )
         await onSave()

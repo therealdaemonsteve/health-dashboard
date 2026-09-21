@@ -142,7 +142,7 @@ private struct BiomarkerRow: View {
 
             if let value = item.latestValue {
                 VStack(alignment: .trailing, spacing: 2) {
-                    Text(formatValue(value))
+                    Text(Formatters.value(value))
                         .fontWeight(.medium)
                         .monospacedDigit()
                     if let unit = item.unit {
@@ -155,10 +155,4 @@ private struct BiomarkerRow: View {
         }
     }
 
-    private func formatValue(_ v: Double) -> String {
-        if v == v.rounded() && v < 10000 {
-            return String(format: "%.0f", v)
-        }
-        return String(format: "%.1f", v)
-    }
 }

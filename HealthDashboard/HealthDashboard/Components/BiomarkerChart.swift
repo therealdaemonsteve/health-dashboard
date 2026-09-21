@@ -36,7 +36,7 @@ struct BiomarkerChart: View {
         let data = filteredMeasurements
         Chart {
             // Reference range bands
-            if let reference = reference {
+            if let reference {
                 if let green = reference.green, green.count == 2 {
                     RectangleMark(
                         yStart: .value("Low", green[0]),
@@ -60,7 +60,7 @@ struct BiomarkerChart: View {
 
             // Data line
             ForEach(data, id: \.date) { m in
-                if let date = parseDate(m.date) {
+                if let date = Formatters.parseDate(m.date) {
                     LineMark(
                         x: .value("Date", date),
                         y: .value("Value", m.value)
@@ -80,7 +80,7 @@ struct BiomarkerChart: View {
             // Rolling average overlay
             if let rollingData = rollingAverageData {
                 ForEach(rollingData) { pt in
-                    if let date = parseDate(pt.date) {
+                    if let date = Formatters.parseDate(pt.date) {
                         LineMark(
                             x: .value("Date", date),
                             y: .value("Rolling Avg", pt.value)
@@ -112,8 +112,7 @@ struct BiomarkerChart: View {
         .chartScrollPosition(x: $scrollPosition)
         .frame(height: 220)
         .onAppear {
-            // Scroll to show most recent data
-            if let lastDate = data.last.flatMap({ parseDate($0.date) }) {
+            if let lastDate = data.last.flatMap({ Formatters.parseDate($0.date) }) {
                 scrollPosition = lastDate
             }
         }
@@ -136,7 +135,7 @@ struct BiomarkerChart: View {
                 Text(closest.date)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
-                Text("\(formatOverlayValue(closest.value)) \(closest.unit)")
+                Text(Formatters.valueWithUnit(closest.value, unit: closest.unit))
                     .font(.caption)
                     .fontWeight(.semibold)
             }
@@ -149,7 +148,7 @@ struct BiomarkerChart: View {
 
     private func closestMeasurement(to date: Date, in data: [Measurement]) -> Measurement? {
         data.min(by: {
-            guard let d1 = parseDate($0.date), let d2 = parseDate($1.date) else { return false }
+            guard let d1 = Formatters.parseDate($0.date), let d2 = Formatters.parseDate($1.date) else { return false }
             return abs(d1.timeIntervalSince(date)) < abs(d2.timeIntervalSince(date))
         })
     }
@@ -158,7 +157,6 @@ struct BiomarkerChart: View {
         var lo = data.map(\.value).min() ?? 0
         var hi = data.map(\.value).max() ?? 1
 
-        // Include reference range bounds if present
         if let ref = reference {
             if let green = ref.green, green.count == 2 {
                 lo = min(lo, green[0])
@@ -174,7 +172,6 @@ struct BiomarkerChart: View {
             if let redHigh = ref.redHigh { hi = max(hi, redHigh) }
         }
 
-        // Add 5% padding
         let padding = (hi - lo) * 0.05
         return (lo - padding) ... (hi + padding)
     }
@@ -186,7 +183,7 @@ struct BiomarkerChart: View {
 
         guard let cutoff = dateRange.startDate else { return sorted }
         return sorted.filter {
-            guard let d = parseDate($0.date) else { return true }
+            guard let d = Formatters.parseDate($0.date) else { return true }
             return d >= cutoff
         }
     }
@@ -198,21 +195,5 @@ struct BiomarkerChart: View {
         case .red: return .red
         default: return .blue
         }
-    }
-
-    private func parseDate(_ str: String) -> Date? {
-        let fmt = DateFormatter()
-        fmt.dateFormat = "yyyy-MM-dd"
-        fmt.locale = Locale(identifier: "en_US_POSIX")
-        return fmt.date(from: str)
-    }
-
-    private func formatOverlayValue(_ v: Double) -> String {
-        if v == v.rounded() && abs(v) < 10000 {
-            return String(format: "%.0f", v)
-        } else if abs(v) < 1 {
-            return String(format: "%.3f", v)
-        }
-        return String(format: "%.1f", v)
     }
 }

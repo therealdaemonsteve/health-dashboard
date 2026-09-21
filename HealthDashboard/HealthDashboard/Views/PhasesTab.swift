@@ -36,9 +36,7 @@ private func isDueToday(timing: String) -> Bool {
 }
 
 private func todayDateString() -> String {
-    let fmt = DateFormatter()
-    fmt.dateFormat = "yyyy-MM-dd"
-    return fmt.string(from: Date())
+    Formatters.today
 }
 
 @Observable
@@ -224,7 +222,7 @@ private struct PhaseCard: View {
         .padding(14)
         .background(.background)
         .clipShape(RoundedRectangle(cornerRadius: 12))
-        .shadow(color: .black.opacity(0.06), radius: 3, y: 1)
+        .shadow(color: .black.opacity(0.05), radius: 2, y: 1)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
                 .stroke(isActive ? Color.blue.opacity(0.3) : Color.clear, lineWidth: 1.5)
@@ -328,12 +326,10 @@ private struct PhaseCard: View {
                 if isActive {
                     Button("Complete Phase") {
                         Task {
-                            let fmt = DateFormatter()
-                            fmt.dateFormat = "yyyy-MM-dd"
                             _ = try? await MCPClient.shared.updatePhase(
                                 phaseId: phase.id,
                                 status: "completed",
-                                endDate: fmt.string(from: Date())
+                                endDate: Formatters.today
                             )
                             await onUpdate()
                         }
@@ -447,15 +443,12 @@ struct AddPhaseSheet: View {
 
     private func save() async {
         isSaving = true
-        let fmt = DateFormatter()
-        fmt.dateFormat = "yyyy-MM-dd"
-
         let supps = supplements.filter { !$0.name.isEmpty }.map { Supplement(name: $0.name, dose: $0.dose, timing: $0.timing) }
         let meds = medications.filter { !$0.name.isEmpty }.map { Medication(name: $0.name, dose: $0.dose, timing: $0.timing) }
 
         _ = try? await MCPClient.shared.addPhase(
             name: name,
-            startDate: fmt.string(from: startDate),
+            startDate: Formatters.dateString(from: startDate),
             target: target.isEmpty ? nil : target,
             supplements: supps.isEmpty ? nil : supps,
             medications: meds.isEmpty ? nil : meds,
@@ -636,7 +629,7 @@ private struct TodayChecklist: View {
         .padding(14)
         .background(.background)
         .clipShape(RoundedRectangle(cornerRadius: 12))
-        .shadow(color: .black.opacity(0.06), radius: 3, y: 1)
+        .shadow(color: .black.opacity(0.05), radius: 2, y: 1)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
                 .stroke(Color.orange.opacity(0.3), lineWidth: 1.5)

@@ -96,7 +96,7 @@ struct BiomarkerDetailView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             if let target = vm.deleteTarget {
-                Text("Delete \(formatValue(target.value)) \(target.unit) from \(target.date)?")
+                Text("Delete \(Formatters.value(target.value)) \(target.unit) from \(target.date)?")
             }
         }
     }
@@ -193,7 +193,7 @@ struct BiomarkerDetailView: View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 4) {
                 if let stats = detail.stats, let value = stats.latestValue {
-                    Text(formatValue(value))
+                    Text(Formatters.value(value))
                         .font(.system(size: 40, weight: .bold, design: .rounded))
                     if let unit = detail.units?.first ?? detail.reference?.unit {
                         Text(unit)
@@ -222,11 +222,11 @@ struct BiomarkerDetailView: View {
                 GridItem(.flexible()),
                 GridItem(.flexible()),
             ], spacing: 12) {
-                StatBox(label: "Min", value: formatValue(stats.min))
-                StatBox(label: "Mean", value: formatValue(stats.mean))
-                StatBox(label: "Max", value: formatValue(stats.max))
+                StatBox(label: "Min", value: Formatters.value(stats.min))
+                StatBox(label: "Mean", value: Formatters.value(stats.mean))
+                StatBox(label: "Max", value: Formatters.value(stats.max))
                 StatBox(label: "Measurements", value: stats.n.map { "\($0)" })
-                StatBox(label: "Change", value: stats.pctChange.map { String(format: "%+.0f%%", $0) })
+                StatBox(label: "Change", value: stats.pctChange.map { Formatters.pctChange($0) })
                 StatBox(label: "Span", value: stats.spanDays.map { "\($0)d" })
             }
         }
@@ -240,7 +240,7 @@ struct BiomarkerDetailView: View {
             if let green = ref.green, green.count == 2 {
                 HStack {
                     Circle().fill(.green).frame(width: 8, height: 8)
-                    Text("Optimal: \(formatValue(green[0])) - \(formatValue(green[1]))")
+                    Text("Optimal: \(Formatters.value(green[0])) - \(Formatters.value(green[1]))")
                         .font(.callout)
                     if let unit = ref.unit {
                         Text(unit)
@@ -255,7 +255,7 @@ struct BiomarkerDetailView: View {
                     if range.count == 2 {
                         HStack {
                             Circle().fill(.orange).frame(width: 8, height: 8)
-                            Text("Watch: \(formatValue(range[0])) - \(formatValue(range[1]))")
+                            Text("Watch: \(Formatters.value(range[0])) - \(Formatters.value(range[1]))")
                                 .font(.callout)
                         }
                     }
@@ -265,14 +265,14 @@ struct BiomarkerDetailView: View {
             if let low = ref.redLow {
                 HStack {
                     Circle().fill(.red).frame(width: 8, height: 8)
-                    Text("Low threshold: < \(formatValue(low))")
+                    Text("Low threshold: < \(Formatters.value(low))")
                         .font(.callout)
                 }
             }
             if let high = ref.redHigh {
                 HStack {
                     Circle().fill(.red).frame(width: 8, height: 8)
-                    Text("High threshold: > \(formatValue(high))")
+                    Text("High threshold: > \(Formatters.value(high))")
                         .font(.callout)
                 }
             }
@@ -291,7 +291,7 @@ struct BiomarkerDetailView: View {
                         .font(.callout)
                         .monospacedDigit()
                     Spacer()
-                    Text("\(formatValue(m.value)) \(m.unit)")
+                    Text(Formatters.valueWithUnit(m.value, unit: m.unit))
                         .font(.callout)
                         .monospacedDigit()
                     if let source = m.sourceLabel ?? m.source {
@@ -320,15 +320,6 @@ struct BiomarkerDetailView: View {
         }
     }
 
-    private func formatValue(_ v: Double?) -> String {
-        guard let v else { return "-" }
-        if v == v.rounded() && abs(v) < 10000 {
-            return String(format: "%.0f", v)
-        } else if abs(v) < 1 {
-            return String(format: "%.3f", v)
-        }
-        return String(format: "%.1f", v)
-    }
 }
 
 private struct StatBox: View {

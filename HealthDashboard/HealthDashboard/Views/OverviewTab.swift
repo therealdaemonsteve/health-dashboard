@@ -16,9 +16,16 @@ class OverviewViewModel {
             let aScore = severityScore(a)
             let bScore = severityScore(b)
             if aScore != bScore { return aScore > bScore }
-            // Secondary: larger absolute percent change = more urgent
             return abs(a.pctChange ?? 0) > abs(b.pctChange ?? 0)
         }
+    }
+
+    var redFlagged: [FlaggedBiomarker] {
+        sortedFlagged.filter { $0.status == .red }
+    }
+
+    var amberFlagged: [FlaggedBiomarker] {
+        sortedFlagged.filter { $0.status == .amber }
     }
 
     /// Trends that need attention (critical + warning only)
@@ -52,13 +59,12 @@ class OverviewViewModel {
             return base + abs(item.pctChange ?? 0)
         }
 
-        // Calculate how far outside the optimal range the value is
         var deviation: Double = 0
         if let green = ref.green, green.count == 2 {
             let midpoint = (green[0] + green[1]) / 2
             let halfRange = (green[1] - green[0]) / 2
             if halfRange > 0 {
-                deviation = abs(value - midpoint) / halfRange // normalized deviation
+                deviation = abs(value - midpoint) / halfRange
             }
         } else if let redLow = ref.redLow, value < redLow, redLow > 0 {
             deviation = (redLow - value) / redLow * 100
@@ -95,37 +101,21 @@ struct OverviewTab: View {
 
     @ViewBuilder
     private var content: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            // Health Score
+        VStack(alignment: .leading, spacing: 24) {
+            // Hero: Health Score + Status Summary
             if let scores = vm.healthScores {
-                HealthScoreSection(scores: scores)
+                HealthScoreHero(scores: scores, statusCounts: vm.overview?.statusCounts)
             }
 
-            // Headline
-            if let headline = vm.overview?.headline {
-                Text(headline)
-                    .font(.body)
-                    .padding()
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(.blue.opacity(0.08))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-            }
-
-            // Status counts
-            if let counts = vm.overview?.statusCounts {
-                HStack(spacing: 12) {
-                    StatusCountCard(label: "Green", count: counts.green, color: .green)
-                    StatusCountCard(label: "Amber", count: counts.amber, color: .orange)
-                    StatusCountCard(label: "Red", count: counts.red, color: .red)
-                }
+            // AI Headline
+            if let headline = vm.overview?.headline, !headline.isEmpty {
+                HeadlineCard(text: headline)
             }
 
             // Trend Alerts
             if !vm.alertTrends.isEmpty {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Trend Alerts")
-                        .font(.headline)
-
+                SectionHeader(title: "Trend Alerts", icon: "exclamationmark.triangle.fill", color: .orange)
+                VStack(spacing: 8) {
                     ForEach(vm.alertTrends) { trend in
                         NavigationLink(destination: BiomarkerDetailView(biomarkerName: trend.biomarker)) {
                             TrendAlertRow(trend: trend)
@@ -135,13 +125,11 @@ struct OverviewTab: View {
                 }
             }
 
-            // Flagged biomarkers (sorted by severity)
-            if !vm.flagged.isEmpty {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Flagged Biomarkers")
-                        .font(.headline)
-
-                    ForEach(vm.sortedFlagged) { item in
+            // Flagged: Red
+            if !vm.redFlagged.isEmpty {
+                SectionHeader(title: "Needs Attention", icon: "xmark.circle.fill", color: .red, count: vm.redFlagged.count)
+                VStack(spacing: 8) {
+                    ForEach(vm.redFlagged) { item in
                         NavigationLink(destination: BiomarkerDetailView(biomarkerName: item.name)) {
                             FlaggedRow(item: item)
                         }
@@ -150,24 +138,29 @@ struct OverviewTab: View {
                 }
             }
 
-            // Categories
-            if let categories = vm.overview?.categories, !categories.isEmpty {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Categories")
-                        .font(.headline)
-
-                    ForEach(categories) { cat in
-                        CategoryCard(category: cat)
+            // Flagged: Amber
+            if !vm.amberFlagged.isEmpty {
+                SectionHeader(title: "Watch List", icon: "exclamationmark.triangle.fill", color: .orange, count: vm.amberFlagged.count)
+                VStack(spacing: 8) {
+                    ForEach(vm.amberFlagged) { item in
+                        NavigationLink(destination: BiomarkerDetailView(biomarkerName: item.name)) {
+                            FlaggedRow(item: item)
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
             }
 
+            // Category Scores
+            if let scores = vm.healthScores, !scores.categories.isEmpty {
+                SectionHeader(title: "Categories", icon: "square.grid.2x2.fill", color: .blue)
+                CategoryScoreGrid(categories: scores.categories)
+            }
+
             // Recommendations
             if let recs = vm.overview?.recommendations, !recs.isEmpty {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Recommendations")
-                        .font(.headline)
-
+                SectionHeader(title: "Recommendations", icon: "lightbulb.fill", color: .yellow)
+                VStack(spacing: 8) {
                     ForEach(recs) { rec in
                         RecommendationCard(recommendation: rec)
                     }
@@ -178,198 +171,155 @@ struct OverviewTab: View {
     }
 }
 
-// MARK: - Subviews
+// MARK: - Section Header
 
-private struct StatusCountCard: View {
-    let label: String
-    let count: Int
+private struct SectionHeader: View {
+    let title: String
+    let icon: String
     let color: Color
+    var count: Int? = nil
 
     var body: some View {
-        VStack(spacing: 4) {
-            Text("\(count)")
-                .font(.title2)
-                .fontWeight(.bold)
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.subheadline)
                 .foregroundStyle(color)
-            Text(label)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 12)
-        .background(color.opacity(0.08))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-    }
-}
-
-private struct FlaggedRow: View {
-    let item: FlaggedBiomarker
-
-    var body: some View {
-        HStack {
-            StatusDot(status: item.status)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(item.name)
-                    .fontWeight(.medium)
-                if let value = item.latestValue, let unit = item.unit {
-                    Text("\(value, specifier: "%.1f") \(unit)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+            Text(title)
+                .font(.headline)
+            if let count {
+                Text("\(count)")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 1)
+                    .background(color.opacity(0.15))
+                    .foregroundStyle(color)
+                    .clipShape(Capsule())
             }
             Spacer()
-            if let pct = item.pctChange {
-                Text("\(pct >= 0 ? "+" : "")\(pct, specifier: "%.0f")%")
-                    .font(.caption)
-                    .foregroundStyle(pct >= 0 ? .red : .green)
-            }
-            Image(systemName: "chevron.right")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
         }
-        .padding(12)
-        .background(.background)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-        .shadow(color: .black.opacity(0.05), radius: 2, y: 1)
+        .padding(.top, 4)
     }
 }
 
-private struct CategoryCard: View {
-    let category: OverviewCategory
+// MARK: - Health Score Hero
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Text(category.displayName)
-                    .fontWeight(.medium)
-                Spacer()
-                toneIndicator
-            }
-            Text(category.displayText)
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .lineLimit(3)
-        }
-        .padding(12)
-        .background(.background)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-        .shadow(color: .black.opacity(0.05), radius: 2, y: 1)
-    }
-
-    @ViewBuilder
-    private var toneIndicator: some View {
-        switch category.displayTone {
-        case "positive", "green":
-            Image(systemName: "checkmark.circle.fill")
-                .foregroundStyle(.green)
-        case "watch", "amber", "yellow":
-            Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundStyle(.orange)
-        case "red", "critical":
-            Image(systemName: "xmark.circle.fill")
-                .foregroundStyle(.red)
-        default:
-            Image(systemName: "minus.circle.fill")
-                .foregroundStyle(.secondary)
-        }
-    }
-}
-
-private struct HealthScoreSection: View {
+private struct HealthScoreHero: View {
     let scores: HealthScoresResponse
+    let statusCounts: StatusCounts?
     @State private var expandedCategory: String?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // Overall score gauge
-            HStack(spacing: 16) {
+        VStack(spacing: 16) {
+            // Top row: score gauge + summary
+            HStack(spacing: 20) {
+                // Large circular gauge
                 ZStack {
                     Circle()
-                        .stroke(.quaternary, lineWidth: 8)
-                        .frame(width: 70, height: 70)
+                        .stroke(.quaternary, lineWidth: 10)
+                        .frame(width: 90, height: 90)
                     Circle()
                         .trim(from: 0, to: scores.overallScore / 100)
-                        .stroke(gradeColor(scores.overallGrade), style: StrokeStyle(lineWidth: 8, lineCap: .round))
-                        .frame(width: 70, height: 70)
+                        .stroke(gradeColor(scores.overallGrade), style: StrokeStyle(lineWidth: 10, lineCap: .round))
+                        .frame(width: 90, height: 90)
                         .rotationEffect(.degrees(-90))
                     VStack(spacing: 0) {
                         Text(scores.overallGrade)
-                            .font(.title2)
+                            .font(.title)
                             .fontWeight(.bold)
+                            .foregroundStyle(gradeColor(scores.overallGrade))
                         Text(String(format: "%.0f", scores.overallScore))
-                            .font(.caption2)
+                            .font(.caption)
                             .foregroundStyle(.secondary)
                     }
                 }
 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Health Score")
-                        .font(.headline)
-                    Text("\(scores.categories.count) categories scored")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                // Status summary
+                if let counts = statusCounts {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Health Score")
+                            .font(.headline)
+                        HStack(spacing: 12) {
+                            StatusPill(count: counts.green, color: .green, label: "Optimal")
+                            StatusPill(count: counts.amber, color: .orange, label: "Watch")
+                            StatusPill(count: counts.red, color: .red, label: "Flag")
+                        }
+                    }
+                } else {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Health Score")
+                            .font(.headline)
+                        Text("\(scores.categories.count) categories")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
                 Spacer()
             }
 
-            // Category bars
-            ForEach(scores.categories) { cat in
-                VStack(spacing: 4) {
-                    Button {
-                        withAnimation {
-                            expandedCategory = expandedCategory == cat.category ? nil : cat.category
-                        }
-                    } label: {
-                        HStack {
-                            Text(cat.category)
-                                .font(.caption)
-                                .fontWeight(.medium)
-                            Spacer()
-                            Text(cat.grade)
-                                .font(.caption)
-                                .fontWeight(.bold)
-                                .foregroundStyle(gradeColor(cat.grade))
-                            Text(String(format: "%.0f", cat.score))
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                            Image(systemName: "chevron.right")
-                                .font(.caption2)
-                                .foregroundStyle(.tertiary)
-                                .rotationEffect(.degrees(expandedCategory == cat.category ? 90 : 0))
-                        }
-                    }
-                    .buttonStyle(.plain)
-
-                    GeometryReader { geo in
-                        ZStack(alignment: .leading) {
-                            RoundedRectangle(cornerRadius: 3)
-                                .fill(.quaternary)
-                                .frame(height: 6)
-                            RoundedRectangle(cornerRadius: 3)
-                                .fill(gradeColor(cat.grade))
-                                .frame(width: geo.size.width * cat.score / 100, height: 6)
-                        }
-                    }
-                    .frame(height: 6)
-
-                    if expandedCategory == cat.category {
-                        ForEach(cat.biomarkerScores) { bs in
-                            HStack {
-                                StatusDot(status: RAGStatus(rawValue: bs.status ?? "unknown") ?? .unknown)
-                                Text(bs.biomarker)
-                                    .font(.caption2)
-                                Spacer()
-                                if let v = bs.value {
-                                    Text(String(format: "%.1f", v))
-                                        .font(.caption2)
-                                        .monospacedDigit()
-                                }
-                                Text(String(format: "%.0f", bs.score))
-                                    .font(.caption2)
-                                    .fontWeight(.semibold)
-                                    .foregroundStyle(gradeColor(bs.score >= 90 ? "A" : bs.score >= 75 ? "B" : bs.score >= 60 ? "C" : "D"))
+            // Category breakdown bars
+            VStack(spacing: 6) {
+                ForEach(scores.categories) { cat in
+                    VStack(spacing: 3) {
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                expandedCategory = expandedCategory == cat.category ? nil : cat.category
                             }
-                            .padding(.leading, 8)
+                        } label: {
+                            HStack {
+                                Text(cat.category)
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                                Spacer()
+                                Text(cat.grade)
+                                    .font(.caption)
+                                    .fontWeight(.bold)
+                                    .foregroundStyle(gradeColor(cat.grade))
+                                Text(String(format: "%.0f", cat.score))
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                                    .frame(width: 24, alignment: .trailing)
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 8, weight: .bold))
+                                    .foregroundStyle(.tertiary)
+                                    .rotationEffect(.degrees(expandedCategory == cat.category ? 90 : 0))
+                            }
+                        }
+                        .buttonStyle(.plain)
+
+                        GeometryReader { geo in
+                            ZStack(alignment: .leading) {
+                                RoundedRectangle(cornerRadius: 3)
+                                    .fill(.quaternary)
+                                    .frame(height: 5)
+                                RoundedRectangle(cornerRadius: 3)
+                                    .fill(gradeColor(cat.grade))
+                                    .frame(width: geo.size.width * cat.score / 100, height: 5)
+                            }
+                        }
+                        .frame(height: 5)
+
+                        if expandedCategory == cat.category {
+                            ForEach(cat.biomarkerScores) { bs in
+                                HStack {
+                                    StatusDot(status: RAGStatus(rawValue: bs.status ?? "unknown") ?? .unknown)
+                                    Text(bs.biomarker)
+                                        .font(.caption2)
+                                    Spacer()
+                                    if let v = bs.value, let u = bs.unit {
+                                        Text(Formatters.value(v) + " " + u)
+                                            .font(.caption2)
+                                            .monospacedDigit()
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    Text(String(format: "%.0f", bs.score))
+                                        .font(.caption2)
+                                        .fontWeight(.semibold)
+                                        .foregroundStyle(gradeColor(bs.score >= 90 ? "A" : bs.score >= 75 ? "B" : bs.score >= 60 ? "C" : "D"))
+                                        .frame(width: 24, alignment: .trailing)
+                                }
+                                .padding(.leading, 12)
+                            }
                         }
                     }
                 }
@@ -377,8 +327,119 @@ private struct HealthScoreSection: View {
         }
         .padding()
         .background(.background)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .shadow(color: .black.opacity(0.05), radius: 3, y: 2)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .shadow(color: .black.opacity(0.06), radius: 4, y: 2)
+    }
+
+    private func gradeColor(_ grade: String) -> Color {
+        switch grade {
+        case "A": return .green
+        case "B": return .blue
+        case "C": return .orange
+        case "D": return .red
+        default: return .secondary
+        }
+    }
+
+}
+
+private struct StatusPill: View {
+    let count: Int
+    let color: Color
+    let label: String
+
+    var body: some View {
+        VStack(spacing: 2) {
+            Text("\(count)")
+                .font(.callout)
+                .fontWeight(.bold)
+                .foregroundStyle(color)
+            Text(label)
+                .font(.system(size: 9))
+                .foregroundStyle(.secondary)
+        }
+        .frame(minWidth: 44)
+        .padding(.vertical, 6)
+        .padding(.horizontal, 4)
+        .background(color.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+}
+
+// MARK: - Headline Card
+
+private struct HeadlineCard: View {
+    let text: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "sparkles")
+                .font(.subheadline)
+                .foregroundStyle(.blue)
+                .padding(.top, 2)
+            Text(text)
+                .font(.subheadline)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(.blue.opacity(0.06))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .strokeBorder(.blue.opacity(0.12), lineWidth: 1)
+                )
+        )
+    }
+}
+
+// MARK: - Category Score Grid
+
+private struct CategoryScoreGrid: View {
+    let categories: [CategoryScore]
+
+    private let columns = [
+        GridItem(.flexible(), spacing: 8),
+        GridItem(.flexible(), spacing: 8),
+    ]
+
+    var body: some View {
+        LazyVGrid(columns: columns, spacing: 8) {
+            ForEach(categories) { cat in
+                HStack(spacing: 8) {
+                    // Mini gauge
+                    ZStack {
+                        Circle()
+                            .stroke(.quaternary, lineWidth: 3)
+                            .frame(width: 32, height: 32)
+                        Circle()
+                            .trim(from: 0, to: cat.score / 100)
+                            .stroke(gradeColor(cat.grade), style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                            .frame(width: 32, height: 32)
+                            .rotationEffect(.degrees(-90))
+                        Text(cat.grade)
+                            .font(.caption2)
+                            .fontWeight(.bold)
+                            .foregroundStyle(gradeColor(cat.grade))
+                    }
+
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(cat.category)
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .lineLimit(1)
+                        Text("\(cat.biomarkerCount) markers")
+                            .font(.system(size: 9))
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                }
+                .padding(10)
+                .background(.background)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .shadow(color: .black.opacity(0.05), radius: 2, y: 1)
+            }
+        }
     }
 
     private func gradeColor(_ grade: String) -> Color {
@@ -392,11 +453,50 @@ private struct HealthScoreSection: View {
     }
 }
 
+// MARK: - Flagged Row
+
+private struct FlaggedRow: View {
+    let item: FlaggedBiomarker
+
+    var body: some View {
+        HStack {
+            StatusDot(status: item.status)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(item.name)
+                    .fontWeight(.medium)
+                    .font(.subheadline)
+                if let value = item.latestValue, let unit = item.unit {
+                    Text(Formatters.valueWithUnit(value, unit: unit))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Spacer()
+            if let pct = item.pctChange {
+                Text("\(pct >= 0 ? "+" : "")\(pct, specifier: "%.0f")%")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(pct >= 0 ? .red : .green)
+            }
+            Image(systemName: "chevron.right")
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+        }
+        .padding(12)
+        .background(.background)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .shadow(color: .black.opacity(0.05), radius: 2, y: 1)
+    }
+
+}
+
+// MARK: - Trend Alert Row
+
 private struct TrendAlertRow: View {
     let trend: BiomarkerTrend
 
     var body: some View {
-        HStack {
+        HStack(spacing: 10) {
             Image(systemName: trend.alertLevel == "critical" ? "exclamationmark.triangle.fill" : "arrow.triangle.2.circlepath")
                 .foregroundStyle(trend.alertLevel == "critical" ? .red : .orange)
                 .frame(width: 24)
@@ -404,6 +504,7 @@ private struct TrendAlertRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(trend.biomarker)
                     .fontWeight(.medium)
+                    .font(.subheadline)
                 HStack(spacing: 4) {
                     if let dir = trend.direction {
                         Image(systemName: dir == "rising" ? "arrow.up.right" : "arrow.down.right")
@@ -436,7 +537,7 @@ private struct TrendAlertRow: View {
             }
 
             Image(systemName: "chevron.right")
-                .font(.caption)
+                .font(.caption2)
                 .foregroundStyle(.tertiary)
         }
         .padding(12)
@@ -446,26 +547,31 @@ private struct TrendAlertRow: View {
     }
 }
 
+// MARK: - Recommendation Card
+
 private struct RecommendationCard: View {
     let recommendation: Recommendation
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
             priorityIcon
+                .frame(width: 20)
             VStack(alignment: .leading, spacing: 4) {
                 if let title = recommendation.title {
                     Text(title)
                         .fontWeight(.medium)
+                        .font(.subheadline)
                     Text(recommendation.text)
-                        .font(.callout)
+                        .font(.caption)
                         .foregroundStyle(.secondary)
                 } else {
                     Text(recommendation.text)
-                        .font(.callout)
+                        .font(.subheadline)
                 }
             }
         }
         .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(.background)
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .shadow(color: .black.opacity(0.05), radius: 2, y: 1)

@@ -18,6 +18,7 @@ import urllib.parse
 import uuid
 from datetime import datetime, timedelta
 from difflib import SequenceMatcher
+from html import escape as html_escape
 from math import sqrt, exp, log, pi, erf
 from statistics import mean, median, stdev
 
@@ -39,6 +40,19 @@ PHASES_KEY = "phases.json"
 
 SERVER_NAME = "health-dashboard"
 SERVER_VERSION = "1.0.0"
+
+# ── Constants ────────────────────────────────────────────────────────────────
+
+AUTH_CODE_EXPIRY_SECONDS = 300  # 5 minutes
+ACCESS_TOKEN_EXPIRY_SECONDS = 3600  # 1 hour
+INSIGHT_MODEL = "claude-sonnet-4-20250514"
+INSIGHT_MAX_TOKENS = 200
+INSIGHT_TIMEOUT_SECONDS = 15
+INSIGHT_GENERATION_LIMIT = 10
+BATCH_CHECKPOINT_INTERVAL = 5
+TDEE_HEIGHT_CM = 183
+TDEE_AGE_YEARS = 35
+TDEE_DEFAULT_BASAL_KCAL = 1800
 
 # ── In-memory cache (persists across warm Lambda invocations) ────────────────
 
@@ -409,6 +423,7 @@ APPLE_HEALTH_UNIT_MAP = {"mL/min/kg": "mL/kg/min"}
 # ── S3 helpers ───────────────────────────────────────────────────────────────
 
 import boto3  # noqa: E402 — available in Lambda runtime
+from botocore.exceptions import ClientError as S3ClientError
 
 
 def _s3_client():
@@ -425,26 +440,19 @@ def _load_data(force=False):
     _cache["bloodwork"] = json.loads(resp["Body"].read())
     resp = s3.get_object(Bucket=S3_BUCKET, Key=EVENTS_KEY)
     _cache["events"] = json.loads(resp["Body"].read())
-    try:
-        resp = s3.get_object(Bucket=S3_BUCKET, Key=NUTRITION_KEY)
-        _cache["nutrition"] = json.loads(resp["Body"].read())
-    except Exception:
-        _cache["nutrition"] = {"entries": []}
-    try:
-        resp = s3.get_object(Bucket=S3_BUCKET, Key=LIFTING_KEY)
-        _cache["lifting"] = json.loads(resp["Body"].read())
-    except Exception:
-        _cache["lifting"] = {"version": 1, "sessions": []}
-    try:
-        resp = s3.get_object(Bucket=S3_BUCKET, Key=COACHING_KEY)
-        _cache["coaching"] = json.loads(resp["Body"].read())
-    except Exception:
-        _cache["coaching"] = {"version": 1, "goals": [], "notes": [], "action_items": []}
-    try:
-        resp = s3.get_object(Bucket=S3_BUCKET, Key=PHASES_KEY)
-        _cache["phases"] = json.loads(resp["Body"].read())
-    except Exception:
-        _cache["phases"] = {"version": 1, "phases": []}
+    # Optional data files — default to empty structures if not yet created
+    _optional_files = {
+        "nutrition": (NUTRITION_KEY, {"entries": []}),
+        "lifting": (LIFTING_KEY, {"version": 1, "sessions": []}),
+        "coaching": (COACHING_KEY, {"version": 1, "goals": [], "notes": [], "action_items": []}),
+        "phases": (PHASES_KEY, {"version": 1, "phases": []}),
+    }
+    for cache_key, (s3_key, default) in _optional_files.items():
+        try:
+            resp = s3.get_object(Bucket=S3_BUCKET, Key=s3_key)
+            _cache[cache_key] = json.loads(resp["Body"].read())
+        except (S3ClientError, json.JSONDecodeError, KeyError):
+            _cache[cache_key] = default
     _cache["loaded_at"] = datetime.utcnow().isoformat() + "Z"
     return _cache
 
@@ -2334,7 +2342,7 @@ def tool_import_apple_health(args):
     # Only write to S3 on final batch or every 5th batch as checkpoint
     batch_num = _import_index_cache.get("_batch_num", 0) + 1
     _import_index_cache["_batch_num"] = batch_num
-    should_write = imported > 0 and (final_batch or batch_num % 5 == 0)
+    should_write = imported > 0 and (final_batch or batch_num % BATCH_CHECKPOINT_INTERVAL == 0)
     if should_write:
         _write_s3(BLOODWORK_KEY, bw, keep_cache=True)
     elif imported > 0:
@@ -2387,11 +2395,11 @@ def _calculate_tdee(data, date_str):
             if m.get("biomarker") == "Weight" and m.get("value"):
                 weight = m["value"]
                 break
-        # Hardcoded for single-user: height_cm=183, age=35, male
+        # Mifflin-St Jeor (male): 10*weight + 6.25*height - 5*age + 5
         if weight:
-            basal = round(10 * weight + 6.25 * 183 - 5 * 35 + 5)
+            basal = round(10 * weight + 6.25 * TDEE_HEIGHT_CM - 5 * TDEE_AGE_YEARS + 5)
         else:
-            basal = 1800  # conservative default
+            basal = TDEE_DEFAULT_BASAL_KCAL
 
     if active is None:
         active = 0
@@ -2432,8 +2440,8 @@ def _inject_nutrition_biomarkers(data, entry, tdee_info):
             biomarkers.append(bio_entry)
             biomarker_index[metric_name] = bio_entry
 
-        # Generate deterministic ID
-        id_key = f"nutrition|log|{metric_name}|{date_str}|{info['value']}"
+        # Generate deterministic ID (excludes value so re-computations produce the same ID)
+        id_key = f"nutrition|log|{metric_name}|{date_str}"
         mid = "m_" + hashlib.sha1(id_key.encode()).hexdigest()[:12]
 
         # Remove any existing measurement for this metric+date (upsert)
@@ -3736,8 +3744,8 @@ def tool_analyse_event_impact(args):
             try:
                 sd = stdev(before_vals)
                 likely_sig = abs(after_mean - before_mean) > sd
-            except Exception:
-                pass
+            except (ValueError, ZeroDivisionError):
+                pass  # stdev requires >= 2 values, avoid div/0
 
         direction = "unchanged"
         if change_pct is not None:
@@ -3992,7 +4000,7 @@ def tool_generate_insights(args):
         return {"status": "no_targets", "message": "No flagged biomarkers to generate insights for."}
 
     generated = []
-    for b in targets[:10]:  # Limit to 10 to avoid Lambda timeout
+    for b in targets[:INSIGHT_GENERATION_LIMIT]:
         stats = _compute_biomarker_stats(bw, b["name"], erroneous_ids)
         ref = b.get("reference")
         status = _classify_value(ref, stats.get("latest_value")) if ref else None
@@ -4062,8 +4070,8 @@ Provide a 2-3 sentence interpretation covering current status, trend, and one ac
             req = urllib.request.Request(
                 "https://api.anthropic.com/v1/messages",
                 data=json.dumps({
-                    "model": "claude-sonnet-4-20250514",
-                    "max_tokens": 200,
+                    "model": INSIGHT_MODEL,
+                    "max_tokens": INSIGHT_MAX_TOKENS,
                     "messages": [{"role": "user", "content": prompt}],
                 }).encode("utf-8"),
                 headers={
@@ -4072,7 +4080,7 @@ Provide a 2-3 sentence interpretation covering current status, trend, and one ac
                     "anthropic-version": "2023-06-01",
                 },
             )
-            with urllib.request.urlopen(req, timeout=15) as resp:
+            with urllib.request.urlopen(req, timeout=INSIGHT_TIMEOUT_SECONDS) as resp:
                 body = json.loads(resp.read())
                 insight_text = body["content"][0]["text"]
         except Exception as e:
@@ -4374,12 +4382,12 @@ def _handle_register(event):
 def _handle_authorize_get(event):
     """GET /authorize — Render HTML consent page with PIN field."""
     qs = event.get("queryStringParameters") or {}
-    client_id = qs.get("client_id", "")
-    redirect_uri = qs.get("redirect_uri", "")
-    code_challenge = qs.get("code_challenge", "")
-    code_challenge_method = qs.get("code_challenge_method", "")
-    state = qs.get("state", "")
-    scope = qs.get("scope", "")
+    client_id = html_escape(qs.get("client_id", ""))
+    redirect_uri = html_escape(qs.get("redirect_uri", ""))
+    code_challenge = html_escape(qs.get("code_challenge", ""))
+    code_challenge_method = html_escape(qs.get("code_challenge_method", ""))
+    state = html_escape(qs.get("state", ""))
+    scope = html_escape(qs.get("scope", ""))
 
     html = f"""<!DOCTYPE html>
 <html>
@@ -4477,7 +4485,7 @@ def _handle_authorize_post(event):
   <form method="POST" action="/authorize">"""
         # Re-inject hidden fields
         for key in ("client_id", "redirect_uri", "code_challenge", "code_challenge_method", "state", "scope"):
-            val = params.get(key, "")
+            val = html_escape(params.get(key, ""))
             html += f'\n    <input type="hidden" name="{key}" value="{val}">'
         html += """
     <label for="pin">PIN</label>
@@ -4499,7 +4507,7 @@ def _handle_authorize_post(event):
         "ruri": redirect_uri,
         "cc": code_challenge,
         "scope": scope,
-        "exp": int(time.time()) + 300,
+        "exp": int(time.time()) + AUTH_CODE_EXPIRY_SECONDS,
     }
     code = _sign_token(code_claims)
 

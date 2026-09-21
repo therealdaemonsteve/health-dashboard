@@ -187,12 +187,9 @@ struct AddMeasurementSheet: View {
         }
 
         isSaving = true
-        let fmt = DateFormatter()
-        fmt.dateFormat = "yyyy-MM-dd"
-
         do {
             let response = try await MCPClient.shared.addMeasurement(
-                date: fmt.string(from: date),
+                date: Formatters.dateString(from: date),
                 biomarker: biomarker,
                 value: numValue,
                 unit: unit
