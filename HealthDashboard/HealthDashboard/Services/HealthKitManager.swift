@@ -7,6 +7,21 @@ actor HealthKitManager {
     private let healthStore = HKHealthStore()
     private let logger = Logger(subsystem: AppConstants.bundleIdentifier, category: "HealthKit")
 
+    /// Formats dates using the device's local timezone so daily aggregates
+    /// align with the user's calendar day (avoids UTC boundary shift — e.g.
+    /// midnight BST = 23:00 UTC previous day).
+    private static let localDateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZZZZZ"
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = .current
+        return f
+    }()
+
+    private static func localDateString(from date: Date) -> String {
+        localDateFormatter.string(from: date)
+    }
+
     // MARK: - Availability & Authorisation
 
     nonisolated var isHealthDataAvailable: Bool {
@@ -102,8 +117,6 @@ actor HealthKitManager {
                     return
                 }
 
-                let formatter = ISO8601DateFormatter()
-                formatter.formatOptions = [.withInternetDateTime]
                 var records: [HealthRecord] = []
 
                 collection.enumerateStatistics(from: adjustedStart, to: endDate) { statistics, _ in
@@ -121,7 +134,7 @@ actor HealthKitManager {
                     records.append(HealthRecord(
                         metric: config.metricKey,
                         value: value,
-                        date: formatter.string(from: statistics.startDate),
+                        date: HealthKitManager.localDateString(from: statistics.startDate),
                         unit: config.unitString
                     ))
                 }
@@ -172,8 +185,6 @@ actor HealthKitManager {
                 }
 
                 let samples = (samplesOrNil as? [HKQuantitySample]) ?? []
-                let formatter = ISO8601DateFormatter()
-                formatter.formatOptions = [.withInternetDateTime]
 
                 let records = samples.map { sample in
                     var value = sample.quantity.doubleValue(for: config.unit)
@@ -182,7 +193,7 @@ actor HealthKitManager {
                     return HealthRecord(
                         metric: config.metricKey,
                         value: value,
-                        date: formatter.string(from: sample.startDate),
+                        date: HealthKitManager.localDateString(from: sample.startDate),
                         unit: config.unitString
                     )
                 }
@@ -212,13 +223,11 @@ actor HealthKitManager {
                 }
 
                 let workouts = (samplesOrNil as? [HKWorkout]) ?? []
-                let formatter = ISO8601DateFormatter()
-                formatter.formatOptions = [.withInternetDateTime]
 
                 var records: [HealthRecord] = []
 
                 for workout in workouts {
-                    let dateString = formatter.string(from: workout.startDate)
+                    let dateString = HealthKitManager.localDateString(from: workout.startDate)
                     let durationMinutes = workout.duration / 60.0
 
                     records.append(HealthRecord(
@@ -277,8 +286,6 @@ actor HealthKitManager {
                 }
 
                 let samples = (samplesOrNil as? [HKCategorySample]) ?? []
-                let formatter = ISO8601DateFormatter()
-                formatter.formatOptions = [.withInternetDateTime]
 
                 var records: [HealthRecord] = []
 
@@ -300,7 +307,7 @@ actor HealthKitManager {
                         records.append(HealthRecord(
                             metric: config.metricKey,
                             value: durationMinutes,
-                            date: formatter.string(from: sample.startDate),
+                            date: HealthKitManager.localDateString(from: sample.startDate),
                             unit: config.unitString
                         ))
                     } else if config.metricKey == "mindfulSession" {
@@ -309,7 +316,7 @@ actor HealthKitManager {
                         records.append(HealthRecord(
                             metric: config.metricKey,
                             value: durationMinutes,
-                            date: formatter.string(from: sample.startDate),
+                            date: HealthKitManager.localDateString(from: sample.startDate),
                             unit: config.unitString
                         ))
                     } else if config.metricKey == "appleStandHour" {
@@ -318,7 +325,7 @@ actor HealthKitManager {
                             records.append(HealthRecord(
                                 metric: config.metricKey,
                                 value: 1,
-                                date: formatter.string(from: sample.startDate),
+                                date: HealthKitManager.localDateString(from: sample.startDate),
                                 unit: config.unitString
                             ))
                         }
@@ -327,7 +334,7 @@ actor HealthKitManager {
                         records.append(HealthRecord(
                             metric: config.metricKey,
                             value: 1,
-                            date: formatter.string(from: sample.startDate),
+                            date: HealthKitManager.localDateString(from: sample.startDate),
                             unit: config.unitString
                         ))
                     }

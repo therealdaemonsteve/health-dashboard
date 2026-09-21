@@ -273,6 +273,33 @@ enum HealthKitTypeRegistry {
             aggregation: .cumulativeSum
         ),
         .init(
+            sampleType: HKQuantityType(.dietaryFatSaturated),
+            metricKey: "dietaryFatSaturated",
+            unit: .gram(),
+            unitString: "g",
+            enableBackgroundDelivery: false,
+            backgroundDeliveryFrequency: .hourly,
+            aggregation: .cumulativeSum
+        ),
+        .init(
+            sampleType: HKQuantityType(.dietaryFatMonounsaturated),
+            metricKey: "dietaryFatMonounsaturated",
+            unit: .gram(),
+            unitString: "g",
+            enableBackgroundDelivery: false,
+            backgroundDeliveryFrequency: .hourly,
+            aggregation: .cumulativeSum
+        ),
+        .init(
+            sampleType: HKQuantityType(.dietaryFatPolyunsaturated),
+            metricKey: "dietaryFatPolyunsaturated",
+            unit: .gram(),
+            unitString: "g",
+            enableBackgroundDelivery: false,
+            backgroundDeliveryFrequency: .hourly,
+            aggregation: .cumulativeSum
+        ),
+        .init(
             sampleType: HKQuantityType(.dietaryFiber),
             metricKey: "dietaryFiber",
             unit: .gram(),
@@ -412,6 +439,132 @@ enum HealthKitTypeRegistry {
         .init(
             sampleType: HKQuantityType(.dietaryVitaminB12),
             metricKey: "dietaryVitaminB12",
+            unit: .gramUnit(with: .micro),
+            unitString: "mcg",
+            enableBackgroundDelivery: false,
+            backgroundDeliveryFrequency: .hourly,
+            aggregation: .cumulativeSum
+        ),
+        .init(
+            sampleType: HKQuantityType(.dietaryVitaminB6),
+            metricKey: "dietaryVitaminB6",
+            unit: .gramUnit(with: .milli),
+            unitString: "mg",
+            enableBackgroundDelivery: false,
+            backgroundDeliveryFrequency: .hourly,
+            aggregation: .cumulativeSum
+        ),
+        .init(
+            sampleType: HKQuantityType(.dietaryVitaminE),
+            metricKey: "dietaryVitaminE",
+            unit: .gramUnit(with: .milli),
+            unitString: "mg",
+            enableBackgroundDelivery: false,
+            backgroundDeliveryFrequency: .hourly,
+            aggregation: .cumulativeSum
+        ),
+        .init(
+            sampleType: HKQuantityType(.dietaryVitaminK),
+            metricKey: "dietaryVitaminK",
+            unit: .gramUnit(with: .micro),
+            unitString: "mcg",
+            enableBackgroundDelivery: false,
+            backgroundDeliveryFrequency: .hourly,
+            aggregation: .cumulativeSum
+        ),
+        .init(
+            sampleType: HKQuantityType(.dietaryNiacin),
+            metricKey: "dietaryNiacin",
+            unit: .gramUnit(with: .milli),
+            unitString: "mg",
+            enableBackgroundDelivery: false,
+            backgroundDeliveryFrequency: .hourly,
+            aggregation: .cumulativeSum
+        ),
+        .init(
+            sampleType: HKQuantityType(.dietaryThiamin),
+            metricKey: "dietaryThiamin",
+            unit: .gramUnit(with: .milli),
+            unitString: "mg",
+            enableBackgroundDelivery: false,
+            backgroundDeliveryFrequency: .hourly,
+            aggregation: .cumulativeSum
+        ),
+        .init(
+            sampleType: HKQuantityType(.dietaryRiboflavin),
+            metricKey: "dietaryRiboflavin",
+            unit: .gramUnit(with: .milli),
+            unitString: "mg",
+            enableBackgroundDelivery: false,
+            backgroundDeliveryFrequency: .hourly,
+            aggregation: .cumulativeSum
+        ),
+        .init(
+            sampleType: HKQuantityType(.dietaryBiotin),
+            metricKey: "dietaryBiotin",
+            unit: .gramUnit(with: .micro),
+            unitString: "mcg",
+            enableBackgroundDelivery: false,
+            backgroundDeliveryFrequency: .hourly,
+            aggregation: .cumulativeSum
+        ),
+        .init(
+            sampleType: HKQuantityType(.dietaryPantothenicAcid),
+            metricKey: "dietaryPantothenicAcid",
+            unit: .gramUnit(with: .milli),
+            unitString: "mg",
+            enableBackgroundDelivery: false,
+            backgroundDeliveryFrequency: .hourly,
+            aggregation: .cumulativeSum
+        ),
+        .init(
+            sampleType: HKQuantityType(.dietaryPhosphorus),
+            metricKey: "dietaryPhosphorus",
+            unit: .gramUnit(with: .milli),
+            unitString: "mg",
+            enableBackgroundDelivery: false,
+            backgroundDeliveryFrequency: .hourly,
+            aggregation: .cumulativeSum
+        ),
+        .init(
+            sampleType: HKQuantityType(.dietarySelenium),
+            metricKey: "dietarySelenium",
+            unit: .gramUnit(with: .micro),
+            unitString: "mcg",
+            enableBackgroundDelivery: false,
+            backgroundDeliveryFrequency: .hourly,
+            aggregation: .cumulativeSum
+        ),
+        .init(
+            sampleType: HKQuantityType(.dietaryCopper),
+            metricKey: "dietaryCopper",
+            unit: .gramUnit(with: .milli),
+            unitString: "mg",
+            enableBackgroundDelivery: false,
+            backgroundDeliveryFrequency: .hourly,
+            aggregation: .cumulativeSum
+        ),
+        .init(
+            sampleType: HKQuantityType(.dietaryManganese),
+            metricKey: "dietaryManganese",
+            unit: .gramUnit(with: .milli),
+            unitString: "mg",
+            enableBackgroundDelivery: false,
+            backgroundDeliveryFrequency: .hourly,
+            aggregation: .cumulativeSum
+        ),
+        .init(
+            sampleType: HKQuantityType(.dietaryIodine),
+            metricKey: "dietaryIodine",
+            unit: .gramUnit(with: .micro),
+            unitString: "mcg",
+            enableBackgroundDelivery: false,
+            backgroundDeliveryFrequency: .hourly,
+            aggregation: .cumulativeSum
+        ),
+        .init(
+            sampleType: HKQuantityType(.dietaryChromium),
+            metricKey: "dietaryChromium",
             unit: .gramUnit(with: .micro),
             unitString: "mcg",
             enableBackgroundDelivery: false,

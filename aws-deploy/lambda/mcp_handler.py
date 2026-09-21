@@ -149,12 +149,15 @@ APPLE_HEALTH_MAP = {
     "appleSleepingWristTemperature": "Sleeping Wrist Temperature",
     "bloodGlucose": "Blood Glucose",
     "peripheralPerfusionIndex": "Perfusion Index",
-    # Nutrition (dietary intake — distinct from blood test biomarkers)
-    "dietaryEnergyConsumed": "Dietary Calories",
-    "dietaryProtein": "Dietary Protein",
-    "dietaryCarbohydrates": "Dietary Carbs",
-    "dietaryFatTotal": "Dietary Fat",
-    "dietaryFiber": "Dietary Fibre",
+    # Nutrition (dietary intake — map to canonical dashboard names)
+    "dietaryEnergyConsumed": "Calories In",
+    "dietaryProtein": "Protein",
+    "dietaryCarbohydrates": "Carbs",
+    "dietaryFatTotal": "Fat",
+    "dietaryFatSaturated": "Saturated Fat",
+    "dietaryFatMonounsaturated": "Monounsaturated Fat",
+    "dietaryFatPolyunsaturated": "Polyunsaturated Fat",
+    "dietaryFiber": "Fibre",
     "dietarySugar": "Dietary Sugar",
     "dietarySodium": "Dietary Sodium",
     "dietaryWater": "Dietary Water",
@@ -171,6 +174,20 @@ APPLE_HEALTH_MAP = {
     "dietaryFolate": "Dietary Folate",
     "dietaryVitaminA": "Dietary Vitamin A",
     "dietaryVitaminB12": "Dietary Vitamin B12",
+    "dietaryVitaminB6": "Dietary Vitamin B6",
+    "dietaryVitaminE": "Dietary Vitamin E",
+    "dietaryVitaminK": "Dietary Vitamin K",
+    "dietaryNiacin": "Dietary Niacin",
+    "dietaryThiamin": "Dietary Thiamin",
+    "dietaryRiboflavin": "Dietary Riboflavin",
+    "dietaryBiotin": "Dietary Biotin",
+    "dietaryPantothenicAcid": "Dietary Pantothenic Acid",
+    "dietaryPhosphorus": "Dietary Phosphorus",
+    "dietarySelenium": "Dietary Selenium",
+    "dietaryCopper": "Dietary Copper",
+    "dietaryManganese": "Dietary Manganese",
+    "dietaryIodine": "Dietary Iodine",
+    "dietaryChromium": "Dietary Chromium",
     # Audio Exposure
     "environmentalAudioExposure": "Environmental Audio Exposure",
     "headphoneAudioExposure": "Headphone Audio Exposure",
@@ -246,11 +263,11 @@ APPLE_HEALTH_ARTEFACT = {
     "Blood Glucose": lambda v: v < 20 or v > 600,
     "Perfusion Index": lambda v: v < 0 or v > 20,
     # Nutrition (dietary intake)
-    "Dietary Calories": lambda v: v < 0 or v > 10000,
-    "Dietary Protein": lambda v: v < 0 or v > 1000,
-    "Dietary Carbs": lambda v: v < 0 or v > 2000,
-    "Dietary Fat": lambda v: v < 0 or v > 1000,
-    "Dietary Fibre": lambda v: v < 0 or v > 500,
+    "Calories In": lambda v: v < 0 or v > 10000,
+    "Protein": lambda v: v < 0 or v > 1000,
+    "Carbs": lambda v: v < 0 or v > 2000,
+    "Fat": lambda v: v < 0 or v > 1000,
+    "Fibre": lambda v: v < 0 or v > 500,
     "Dietary Sugar": lambda v: v < 0 or v > 2000,
     "Dietary Sodium": lambda v: v < 0 or v > 10000,
     "Dietary Water": lambda v: v < 0 or v > 20,
@@ -335,11 +352,14 @@ APPLE_HEALTH_CATEGORY = {
     "Height": "Body Composition",
     "Waist Circumference": "Body Composition",
     # Nutrition (dietary intake)
-    "Dietary Calories": "Nutrition",
-    "Dietary Protein": "Nutrition",
-    "Dietary Carbs": "Nutrition",
-    "Dietary Fat": "Nutrition",
-    "Dietary Fibre": "Nutrition",
+    "Calories In": "Nutrition",
+    "Protein": "Nutrition",
+    "Carbs": "Nutrition",
+    "Fat": "Nutrition",
+    "Saturated Fat": "Nutrition",
+    "Monounsaturated Fat": "Nutrition",
+    "Polyunsaturated Fat": "Nutrition",
+    "Fibre": "Nutrition",
     "Dietary Sugar": "Nutrition",
     "Dietary Sodium": "Nutrition",
     "Dietary Water": "Nutrition",
@@ -356,6 +376,20 @@ APPLE_HEALTH_CATEGORY = {
     "Dietary Folate": "Micronutrients",
     "Dietary Vitamin A": "Micronutrients",
     "Dietary Vitamin B12": "Micronutrients",
+    "Dietary Vitamin B6": "Micronutrients",
+    "Dietary Vitamin E": "Micronutrients",
+    "Dietary Vitamin K": "Micronutrients",
+    "Dietary Niacin": "Micronutrients",
+    "Dietary Thiamin": "Micronutrients",
+    "Dietary Riboflavin": "Micronutrients",
+    "Dietary Biotin": "Micronutrients",
+    "Dietary Pantothenic Acid": "Micronutrients",
+    "Dietary Phosphorus": "Micronutrients",
+    "Dietary Selenium": "Micronutrients",
+    "Dietary Copper": "Micronutrients",
+    "Dietary Manganese": "Micronutrients",
+    "Dietary Iodine": "Micronutrients",
+    "Dietary Chromium": "Micronutrients",
     # Audio Exposure
     "Environmental Audio Exposure": "Audio",
     "Headphone Audio Exposure": "Audio",
@@ -384,6 +418,8 @@ def _s3_client():
 def _load_data(force=False):
     if not force and "bloodwork" in _cache and "events" in _cache:
         return _cache
+    # Clear import index cache when reloading data to prevent stale indexes
+    _import_index_cache.clear()
     s3 = _s3_client()
     resp = s3.get_object(Bucket=S3_BUCKET, Key=BLOODWORK_KEY)
     _cache["bloodwork"] = json.loads(resp["Body"].read())
@@ -424,7 +460,31 @@ def _sanitize_for_json(obj):
     return obj
 
 
-def _write_s3(key, data):
+def _dedupe_biomarkers(bw):
+    """Merge duplicate biomarker entries (same name) keeping the richest entry."""
+    biomarkers = bw.get("biomarkers", [])
+    seen = {}
+    deduped = []
+    for b in biomarkers:
+        name = b.get("name", "")
+        if name in seen:
+            # Merge into the richer entry (more keys)
+            existing = seen[name]
+            for k, v in b.items():
+                if k not in existing or existing[k] is None:
+                    existing[k] = v
+            existing["count"] = max(existing.get("count", 0), b.get("count", 0))
+        else:
+            seen[name] = b
+            deduped.append(b)
+    if len(deduped) < len(biomarkers):
+        bw["biomarkers"] = deduped
+
+
+def _write_s3(key, data, *, keep_cache=False):
+    # Deduplicate biomarker entries before writing bloodwork data
+    if key == BLOODWORK_KEY and isinstance(data, dict) and "biomarkers" in data:
+        _dedupe_biomarkers(data)
     s3 = _s3_client()
     s3.put_object(
         Bucket=S3_BUCKET,
@@ -432,7 +492,8 @@ def _write_s3(key, data):
         Body=json.dumps(_sanitize_for_json(data), indent=2).encode("utf-8"),
         ContentType="application/json",
     )
-    _cache.clear()
+    if not keep_cache:
+        _cache.clear()
     _invalidate_cloudfront(key)
 
 
@@ -2090,6 +2151,9 @@ def tool_delete_measurement(args):
     return {"status": "deleted", "measurement_id": mid}
 
 
+_import_index_cache = {}  # Persistent index cache for warm-instance batch imports
+
+
 def tool_import_apple_health(args):
     try:
         records = json.loads(args["records_json"])
@@ -2097,32 +2161,66 @@ def tool_import_apple_health(args):
         return {"error": f"Invalid JSON: {e}"}
     if not isinstance(records, list):
         return {"error": "Expected a JSON array of records"}
-    data = _load_data(force=True)
+    final_batch = args.get("final_batch", False)
+
+    # Use cached data if available (warm instance processing sequential batches)
+    data = _load_data(force=("bloodwork" not in _cache))
     bw = data["bloodwork"]
     measurements = bw.setdefault("measurements", [])
     biomarkers = bw.setdefault("biomarkers", [])
-    existing_ids = {m["id"] for m in measurements if "id" in m}
-    biomarker_index = {b["name"]: b for b in biomarkers}
 
-    # Build set of existing (biomarker, date) pairs from apple_health source
-    # to enforce one-value-per-day for dietary metrics (prevents carry-forward dupes)
-    _DAILY_UNIQUE_BIOMARKERS = {"Calories In", "Protein", "Carbs", "Fat", "Fibre",
-                                 "Active Energy Burned", "Basal Energy Burned",
-                                 "Step Count", "Distance Walking/Running"}
-    existing_bio_date = set()
-    for m in measurements:
-        if m.get("source") == "apple_health" and m.get("biomarker") in _DAILY_UNIQUE_BIOMARKERS:
-            existing_bio_date.add((m["biomarker"], m.get("date")))
+    # Reuse index caches across batches on warm instances — avoids O(n) rebuild
+    # Cumulative metrics: update existing value only if new value is higher
+    _DAILY_CUMULATIVE = {
+        "Calories In", "Protein", "Carbs", "Fat", "Saturated Fat",
+        "Monounsaturated Fat", "Polyunsaturated Fat", "Fibre",
+        "Dietary Sugar", "Dietary Sodium", "Dietary Water", "Dietary Caffeine",
+        "Dietary Cholesterol", "Dietary Calcium", "Dietary Iron", "Dietary Potassium",
+        "Dietary Vitamin C", "Dietary Vitamin D", "Dietary Magnesium", "Dietary Zinc",
+        "Dietary Folate", "Dietary Vitamin A", "Dietary Vitamin B12",
+        "Dietary Vitamin B6", "Dietary Vitamin E", "Dietary Vitamin K",
+        "Dietary Niacin", "Dietary Thiamin", "Dietary Riboflavin",
+        "Dietary Biotin", "Dietary Pantothenic Acid",
+        "Dietary Phosphorus", "Dietary Selenium", "Dietary Copper",
+        "Dietary Manganese", "Dietary Iodine", "Dietary Chromium",
+        "Active Energy Burned", "Basal Energy Burned",
+        "Step Count", "Distance Walking/Running",
+        "Exercise Time", "Flights Climbed", "Stand Time", "Time in Daylight",
+    }
+    # First-of-day metrics: keep earliest reading (e.g. morning weigh-in)
+    _DAILY_FIRST = {"Weight"}
+    # Point-in-time metrics: always replace with latest value
+    _DAILY_LATEST = {
+        "BMI", "Body Fat %", "Lean Body Mass",
+        "Resting Heart Rate", "VO2 Max",
+    }
+    _DAILY_UNIQUE_BIOMARKERS = _DAILY_CUMULATIVE | _DAILY_LATEST | _DAILY_FIRST
+    if "existing_ids" not in _import_index_cache:
+        _import_index_cache["existing_ids"] = {m["id"] for m in measurements if "id" in m}
+        _import_index_cache["existing_bio_date"] = {}  # maps (name, date) -> measurement dict
+        _import_index_cache["nutrition_log_dates"] = set()  # (name, date) pairs from nutrition_log
+        for m in measurements:
+            if m.get("biomarker") in _DAILY_UNIQUE_BIOMARKERS:
+                if m.get("source") == "apple_health":
+                    _import_index_cache["existing_bio_date"][(m["biomarker"], m.get("date"))] = m
+                elif m.get("source") == "nutrition_log":
+                    _import_index_cache["nutrition_log_dates"].add((m["biomarker"], m.get("date")))
+        _import_index_cache["biomarker_index"] = {b["name"]: b for b in biomarkers}
+
+    existing_ids = _import_index_cache["existing_ids"]
+    existing_bio_date = _import_index_cache["existing_bio_date"]
+    nutrition_log_dates = _import_index_cache["nutrition_log_dates"]
+    biomarker_index = _import_index_cache["biomarker_index"]
 
     imported = 0
     skipped_unmapped = 0
     skipped_non_numeric = 0
     skipped_artefact = 0
     skipped_duplicate = 0
+    skipped_nutrition_priority = 0
     per_metric = {}
 
     # Group records by (biomarker, date), keeping only the latest record per day
-    # This prevents the carry-forward bug where yesterday's value appears on today
     from collections import defaultdict
     grouped = defaultdict(list)
     ungrouped = []
@@ -2139,11 +2237,14 @@ def tool_import_apple_health(args):
         else:
             ungrouped.append(rec)
 
-    # For daily-unique biomarkers, keep only the last record per (name, date)
     deduped_records = []
     for (name, date), recs in grouped.items():
-        # Keep the last record (most recently added = most up-to-date value)
-        deduped_records.append(recs[-1])
+        if name in _DAILY_FIRST:
+            # Sort by full timestamp and take the earliest reading (e.g. morning weigh-in)
+            recs.sort(key=lambda r: r.get("date", ""))
+            deduped_records.append(recs[0])
+        else:
+            deduped_records.append(recs[-1])
     deduped_records.extend(ungrouped)
 
     for rec in deduped_records:
@@ -2169,11 +2270,30 @@ def tool_import_apple_health(args):
         unit = rec.get("unit", "")
         unit = APPLE_HEALTH_UNIT_MAP.get(unit, unit)
 
-        # Skip if this (biomarker, date) already exists in the DB
-        if name in _DAILY_UNIQUE_BIOMARKERS and (name, date) in existing_bio_date:
-            skipped_duplicate += 1
+        # Skip Apple Health if nutrition_log already has this biomarker+date
+        if (name, date) in nutrition_log_dates:
+            skipped_nutrition_priority += 1
             continue
-        existing_bio_date.add((name, date))
+
+        if name in _DAILY_UNIQUE_BIOMARKERS and (name, date) in existing_bio_date:
+            existing_m = existing_bio_date[(name, date)]
+            should_update = False
+            if name in _DAILY_CUMULATIVE:
+                # Cumulative: update only if new value is higher (more complete daily total)
+                should_update = value > existing_m.get("value", 0)
+            elif name in _DAILY_FIRST:
+                # First-of-day: keep existing (earliest reading already stored)
+                should_update = False
+            else:
+                # Point-in-time: always replace with latest value
+                should_update = value != existing_m.get("value")
+            if should_update:
+                existing_m["value"] = value
+                per_metric[name] = per_metric.get(name, 0) + 1
+                imported += 1
+            else:
+                skipped_duplicate += 1
+            continue
 
         id_key = f"apple_health|apple_watch|{name}|{date}|{raw_value}"
         mid = "m_" + hashlib.sha1(id_key.encode()).hexdigest()[:12]
@@ -2191,7 +2311,7 @@ def tool_import_apple_health(args):
             }
             biomarkers.append(biomarker_entry)
             biomarker_index[name] = biomarker_entry
-        measurements.append({
+        new_m = {
             "id": mid,
             "source": "apple_health",
             "source_label": "Apple Health",
@@ -2199,7 +2319,10 @@ def tool_import_apple_health(args):
             "date": date,
             "value": value,
             "unit": unit,
-        })
+        }
+        measurements.append(new_m)
+        if name in _DAILY_UNIQUE_BIOMARKERS:
+            existing_bio_date[(name, date)] = new_m
         bio = biomarker_index[name]
         stats = bio.setdefault("stats", {})
         stats["n"] = stats.get("n", 0) + 1
@@ -2207,8 +2330,23 @@ def tool_import_apple_health(args):
         imported += 1
     if "count" in bw:
         bw["count"] = len(biomarkers)
-    if imported > 0:
-        _write_s3(BLOODWORK_KEY, bw)
+
+    # Only write to S3 on final batch or every 5th batch as checkpoint
+    batch_num = _import_index_cache.get("_batch_num", 0) + 1
+    _import_index_cache["_batch_num"] = batch_num
+    should_write = imported > 0 and (final_batch or batch_num % 5 == 0)
+    if should_write:
+        _write_s3(BLOODWORK_KEY, bw, keep_cache=True)
+    elif imported > 0:
+        # Mark dirty — data in memory but not yet persisted
+        _import_index_cache["_dirty"] = True
+
+    # If final batch, flush any remaining dirty data and clear index cache
+    if final_batch:
+        if _import_index_cache.get("_dirty") and imported == 0:
+            _write_s3(BLOODWORK_KEY, bw, keep_cache=True)
+        _import_index_cache.clear()
+
     return {
         "status": "ok",
         "total_records": len(records),
@@ -2217,8 +2355,9 @@ def tool_import_apple_health(args):
         "skipped_non_numeric": skipped_non_numeric,
         "skipped_artefact": skipped_artefact,
         "skipped_duplicate": skipped_duplicate,
+        "skipped_nutrition_priority": skipped_nutrition_priority,
         "per_metric": per_metric,
-        "s3_written": imported > 0,
+        "s3_written": should_write,
     }
 
 
@@ -2338,9 +2477,19 @@ def _recompute_all_nutrition_biomarkers(data):
     nutrition = data.get("nutrition", {})
     entries = nutrition.get("entries", [])
 
+    # Build set of (biomarker, date) already covered by apple_health
+    apple_health_dates = set()
+    nutrition_metrics = {"Calories In", "Protein", "Carbs", "Fat", "Fibre"}
+    for m in measurements:
+        if m.get("source") == "apple_health" and m.get("biomarker") in nutrition_metrics:
+            apple_health_dates.add((m["biomarker"], m["date"]))
+
     for entry in entries:
         date_str = entry.get("date")
         if not date_str:
+            continue
+        # Skip dates fully covered by apple_health
+        if all((metric, date_str) in apple_health_dates for metric in nutrition_metrics):
             continue
         tdee_info = _calculate_tdee(data, date_str)
         _inject_nutrition_biomarkers(data, entry, tdee_info)
@@ -4502,7 +4651,19 @@ def handler(event, context):
         body = event.get("body", "")
         if event.get("isBase64Encoded"):
             body = base64.b64decode(body).decode("utf-8")
-        result = tool_import_apple_health({"records_json": body})
+        # Support both formats: bare array or {"records": [...], "final_batch": bool}
+        try:
+            parsed = json.loads(body)
+        except (json.JSONDecodeError, TypeError):
+            parsed = body
+        if isinstance(parsed, dict) and "records" in parsed:
+            args = {
+                "records_json": json.dumps(parsed["records"]),
+                "final_batch": parsed.get("final_batch", False),
+            }
+        else:
+            args = {"records_json": body if isinstance(body, str) else json.dumps(parsed)}
+        result = tool_import_apple_health(args)
         return _http(200, result)
 
     if method == "POST" and path == "/api/import/macrofactor":

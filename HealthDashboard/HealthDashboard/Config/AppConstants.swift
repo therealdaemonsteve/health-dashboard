@@ -31,7 +31,7 @@ enum AppConstants {
 
     // Non-user-configurable constants
     static let appleHealthImportPath = "/api/import/apple-health"
-    static let batchSize = 500
+    static let batchSize = 5000
     static let maxRetries = 3
     static let retryBaseDelay: TimeInterval = 2.0
     static let syncAnchorPrefix = "healthkit_anchor_"

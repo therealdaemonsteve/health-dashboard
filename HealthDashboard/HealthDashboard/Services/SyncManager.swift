@@ -343,9 +343,10 @@ final class SyncManager {
 
         for index in startBatch..<batches.count {
             let batch = batches[index]
+            let isLast = index == batches.count - 1
             syncDetail = "Batch \(index + 1) of \(batches.count)"
 
-            let response = try await sendBatchWithRetry(batch, batchIndex: index)
+            let response = try await sendBatchWithRetry(batch, batchIndex: index, finalBatch: isLast)
             sent += batch.count
             imported += response.imported ?? 0
             skipped += response.skippedDuplicate ?? 0
@@ -439,14 +440,15 @@ final class SyncManager {
 
     private nonisolated func sendBatchWithRetry(
         _ batch: [HealthRecord],
-        batchIndex: Int
+        batchIndex: Int,
+        finalBatch: Bool = false
     ) async throws -> AppleHealthImportResponse {
         let logger = Logger(subsystem: AppConstants.bundleIdentifier, category: "Sync")
         var lastError: Error?
 
         for attempt in 0..<AppConstants.maxRetries {
             do {
-                return try await HealthSyncAPIClient.shared.importRecords(batch)
+                return try await HealthSyncAPIClient.shared.importRecords(batch, finalBatch: finalBatch)
             } catch SyncError.notAuthenticated {
                 throw SyncError.notAuthenticated
             } catch {

@@ -24,11 +24,11 @@ actor HealthSyncAPIClient {
         return decoder
     }()
 
-    func importRecords(_ records: [HealthRecord]) async throws -> AppleHealthImportResponse {
-        try await doImport(records, isRetry: false)
+    func importRecords(_ records: [HealthRecord], finalBatch: Bool = false) async throws -> AppleHealthImportResponse {
+        try await doImport(records, finalBatch: finalBatch, isRetry: false)
     }
 
-    private func doImport(_ records: [HealthRecord], isRetry: Bool) async throws -> AppleHealthImportResponse {
+    private func doImport(_ records: [HealthRecord], finalBatch: Bool, isRetry: Bool) async throws -> AppleHealthImportResponse {
         let token: String
         do {
             token = try await MCPClient.shared.getValidToken()
@@ -41,11 +41,18 @@ actor HealthSyncAPIClient {
             throw SyncError.invalidResponse
         }
 
+        // Wrap records with final_batch flag
+        struct ImportPayload: Encodable {
+            let records: [HealthRecord]
+            let final_batch: Bool
+        }
+        let payload = ImportPayload(records: records, final_batch: finalBatch)
+
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        request.httpBody = try encoder.encode(records)
+        request.httpBody = try encoder.encode(payload)
 
         let (data, response) = try await session.data(for: request)
 
@@ -58,7 +65,7 @@ actor HealthSyncAPIClient {
                 // Try refreshing the token and retry once
                 do {
                     try await MCPClient.shared.refreshAccessToken()
-                    return try await doImport(records, isRetry: true)
+                    return try await doImport(records, finalBatch: finalBatch, isRetry: true)
                 } catch {
                     throw SyncError.notAuthenticated
                 }

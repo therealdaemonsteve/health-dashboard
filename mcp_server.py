@@ -572,8 +572,30 @@ def _sanitize_for_json(obj):
     return obj
 
 
+def _dedupe_biomarkers(bw):
+    """Merge duplicate biomarker entries (same name) keeping the richest entry."""
+    biomarkers = bw.get("biomarkers", [])
+    seen = {}
+    deduped = []
+    for b in biomarkers:
+        name = b.get("name", "")
+        if name in seen:
+            existing = seen[name]
+            for k, v in b.items():
+                if k not in existing or existing[k] is None:
+                    existing[k] = v
+            existing["count"] = max(existing.get("count", 0), b.get("count", 0))
+        else:
+            seen[name] = b
+            deduped.append(b)
+    if len(deduped) < len(biomarkers):
+        bw["biomarkers"] = deduped
+
+
 def _write_s3(key: str, data: dict) -> None:
     """Write JSON data to S3, clear the local cache, and invalidate CloudFront."""
+    if key == BLOODWORK_KEY and isinstance(data, dict) and "biomarkers" in data:
+        _dedupe_biomarkers(data)
     s3 = _s3_client()
     s3.put_object(
         Bucket=S3_BUCKET,
@@ -964,9 +986,19 @@ def _recompute_all_nutrition_biomarkers(data):
     nutrition = data.get("nutrition", {})
     entries = nutrition.get("entries", [])
 
+    # Build set of (biomarker, date) already covered by apple_health
+    apple_health_dates = set()
+    nutrition_metrics = {"Calories In", "Protein", "Carbs", "Fat", "Fibre"}
+    for m in measurements:
+        if m.get("source") == "apple_health" and m.get("biomarker") in nutrition_metrics:
+            apple_health_dates.add((m["biomarker"], m["date"]))
+
     for entry in entries:
         date_str = entry.get("date")
         if not date_str:
+            continue
+        # Skip dates fully covered by apple_health
+        if all((metric, date_str) in apple_health_dates for metric in nutrition_metrics):
             continue
         tdee_info = _calculate_tdee(data, date_str)
         _inject_nutrition_biomarkers(data, entry, tdee_info)
